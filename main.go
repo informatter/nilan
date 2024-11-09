@@ -3,9 +3,9 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"nilan/lexer"
 	"os"
 	"strings"
-	"nilan/lexer"
 )
 
 func main() {
@@ -27,9 +27,8 @@ func main() {
 			Input: cleanedInput,
 		}
 
-		
 		tokens, err := scanner.Scan()
-		if err != nil{
+		if err != nil {
 			fmt.Println(err)
 			continue
 		}
