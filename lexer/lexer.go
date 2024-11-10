@@ -41,7 +41,9 @@ func (lexer *Lexer) nextChar() byte {
 
 }
 
-func (lexer *Lexer) match(expected byte) bool {
+// Determines if the next character in the source code
+// matches the `expected` character.
+func (lexer *Lexer) isNextMatch(expected byte) bool {
 
 	if lexer.isAtEnd() {
 		return false
@@ -71,8 +73,6 @@ func (lexer *Lexer) scanToken() error {
 		tok = token.CreateToken(token.SEMICOLON)
 	case ',':
 		tok = token.CreateToken(token.COMMA)
-	case '=':
-		tok = token.CreateToken(token.ASSIGN)
 	case '*':
 		tok = token.CreateToken(token.MULT)
 	case '+':
@@ -81,16 +81,25 @@ func (lexer *Lexer) scanToken() error {
 		tok = token.CreateToken(token.SUB)
 	case '/':
 		tok = token.CreateToken(token.DIV)
-
+	case '=':
+		tok = token.CreateToken(token.ASSIGN)
+		if lexer.isNextMatch('=') {
+			tok = token.CreateToken(token.EQUAL_EQUAL)
+		}
 	case '!':
 		tok = token.CreateToken(token.BANG)
-		if lexer.match('=') {
+		if lexer.isNextMatch('=') {
 			tok = token.CreateToken(token.NOT_EQUAL)
 		}
 	case '<':
 		tok = token.CreateToken(token.LESS)
-		if lexer.match('=') {
+		if lexer.isNextMatch('=') {
 			tok = token.CreateToken(token.LESS_EQUAL)
+		}
+	case '>':
+		tok = token.CreateToken(token.LARGER)
+		if lexer.isNextMatch('=') {
+			tok = token.CreateToken(token.LARGER_EQUAL)
 		}
 	default:
 		return fmt.Errorf("unexpected character: %c", char)
