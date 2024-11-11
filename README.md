@@ -12,7 +12,7 @@ Start typing nilan code
 To test a particular package:
 
 ```bash
-go fmt ./lexer
+go test ./lexer
 ```
 
 To run all unit tests:

@@ -6,10 +6,9 @@ import (
 	"testing"
 )
 
+func runTest(t *testing.T, testName string, scanner *Lexer, expected []token.Token) {
 
-func runTestSuccess(t *testing.T, scanner *Lexer, expected []token.Token){
-
-	t.Run("ValidTokenScan", func(t *testing.T) {
+	t.Run(testName, func(t *testing.T) {
 		got, err := scanner.Scan()
 		if err != nil {
 			t.Errorf("scanner.Scan() raised an error: %v", err)
@@ -22,7 +21,22 @@ func runTestSuccess(t *testing.T, scanner *Lexer, expected []token.Token){
 	})
 }
 
-func TestOperatorsSuccess(t *testing.T){
+func TestComment(t *testing.T) {
+	testName := "TestComment"
+	expected := []token.Token{
+		token.CreateToken(token.EOF),
+	}
+	test :=
+		`
+	# fmt.Println()
+	# comment
+	`
+	scanner := CreateLexer(test)
+	runTest(t, testName, scanner, expected)
+}
+
+func TestOperatorsSuccess(t *testing.T) {
+	testName := "TestOperatorsSuccess"
 	expected := []token.Token{
 		token.CreateToken(token.EQUAL_EQUAL),
 		token.CreateToken(token.DIV),
@@ -40,11 +54,12 @@ func TestOperatorsSuccess(t *testing.T){
 		token.CreateToken(token.EOF),
 	}
 	scanner := CreateLexer("==/=*+>-<!=<=>=!!")
-	runTestSuccess(t,scanner,expected)
+	runTest(t, testName, scanner, expected)
 
 }
 
 func TestScanSuccess(t *testing.T) {
+	testName := "TestScanSuccess"
 	expected := []token.Token{
 		token.CreateToken(token.LPA),
 		token.CreateToken(token.RPA),
@@ -60,6 +75,6 @@ func TestScanSuccess(t *testing.T) {
 	}
 
 	scanner := CreateLexer("(){}**;+!=<=")
-	runTestSuccess(t,scanner,expected)
+	runTest(t, testName, scanner, expected)
 
 }
