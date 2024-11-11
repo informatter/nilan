@@ -68,6 +68,7 @@ var tokenTypes = map[TokenType]string{
 	"<=":  LESS_EQUAL,
 	">":   LARGER,
 	">=":  LARGER_EQUAL,
+	"==":  EQUAL_EQUAL,
 }
 
 type TokenType string
