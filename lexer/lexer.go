@@ -10,10 +10,15 @@ const (
 )
 
 type Lexer struct {
-	Input     string
-	tokens    []token.Token
-	position  int
-	lineCount int
+	Input        string
+	tokens       []token.Token
+	position     int
+	readPosition int
+	lineCount    int
+}
+
+func isLetter(char byte) bool {
+	return 'a' <= char && char <= 'z' || 'A' <= char && char <= 'Z' || char == '_'
 }
 
 // Initializes and returns a new Lexer instance.
@@ -26,9 +31,16 @@ type Lexer struct {
 //   - *Lexer: A pointer to a newly created Lexer instance.
 func CreateLexer(input string) *Lexer {
 	return &Lexer{
-		Input:     input,
-		lineCount: 0,
+		Input:        input,
+		lineCount:    0,
+		position:     0,
+		readPosition: 0,
 	}
+}
+
+func (lexer *Lexer) advance() {
+	lexer.position = lexer.readPosition
+	lexer.readPosition++
 }
 
 // Determines of the lexer has finished scanning all the source code.
@@ -36,21 +48,23 @@ func CreateLexer(input string) *Lexer {
 // Returns:
 //   - bool: true if the lexer has finished scanning, false otherwise
 func (lexer *Lexer) isFinished() bool {
-	return lexer.position >= len(lexer.Input)
-}
-
-// Increments the lexer's position by one unit
-func (lexer *Lexer) advance() {
-	lexer.position++
+	return lexer.readPosition >= len(lexer.Input)
 }
 
 // Gets the character at the lexer's current position
 //
 // Returns:
 //   - byte: The character at the lexer's current position.
-func (lexer *Lexer) getCurrentChar() byte {
+func (lexer *Lexer) readChar() byte {
 
-	return lexer.Input[lexer.position]
+	if lexer.isFinished() {
+		return 0
+	}
+
+	char := lexer.Input[lexer.readPosition]
+	lexer.advance()
+
+	return char
 }
 
 // Returns the next character in the input without advancing the lexer's position.
@@ -65,7 +79,7 @@ func (lexer *Lexer) peek() byte {
 	if lexer.isFinished() {
 		return 0
 	}
-	return lexer.Input[lexer.position]
+	return lexer.Input[lexer.readPosition]
 }
 
 // handleComment processes a comment in the input stream.
@@ -89,28 +103,61 @@ func (lexer *Lexer) handleComment(char byte) bool {
 		if result == 0 || result == '\n' {
 			break
 		}
+
+		// could be wrapped in to a method
 		lexer.advance()
 	}
 
 	return true
 }
 
+func (lexer *Lexer) handleIdentifier() {
+
+	initPos := lexer.position
+	for {
+		result := lexer.peek()
+		if result == 0 || result == '\n' || !isLetter(result) {
+			break
+		}
+
+		// could be wrapped in to a method
+		lexer.position = lexer.readPosition
+		lexer.readPosition++
+	}
+
+	substring := lexer.Input[initPos:lexer.readPosition]
+	lexeme := token.CreateLiteralToken(token.IDENTIFIER, substring)
+	lexer.tokens = append(lexer.tokens, lexeme)
+
+}
+
 // Determines if the next character in the source code
 // matches the `expected` character.
 func (lexer *Lexer) isMatch(expected byte) bool {
 
-	if lexer.isFinished() {
-		return false
-	}
-	nextIndex := lexer.position + 1
+	nextIndex := lexer.readPosition
 	if nextIndex >= len(lexer.Input) {
 		return false
 	}
-	if lexer.Input[nextIndex] != expected {
-		return false
+
+	if lexer.Input[nextIndex] == expected {
+		lexer.readPosition++
+		return true
 	}
-	lexer.advance()
-	return true
+	return false
+
+}
+
+func (lexer *Lexer) isWhiteSpace(char byte) bool {
+
+	if char == ' ' || char == '\r' || char == '\t' {
+		return true
+	}
+	if char == '\n' {
+		lexer.lineCount++
+		return true
+	}
+	return false
 }
 
 // Processes the current character and creates a token if applicable.
@@ -122,7 +169,10 @@ func (lexer *Lexer) isMatch(expected byte) bool {
 //   - error: An error if an unexpected character is encountered, nil otherwise.
 func (lexer *Lexer) scanToken() error {
 
-	char := lexer.getCurrentChar()
+	char := lexer.readChar()
+	if lexer.isWhiteSpace(char) {
+		return nil
+	}
 	var tok token.Token
 	switch char {
 	case '(':
@@ -150,6 +200,7 @@ func (lexer *Lexer) scanToken() error {
 		if lexer.isMatch('=') {
 			tok = token.CreateToken(token.EQUAL_EQUAL)
 		}
+		fmt.Println(tok)
 	case '!':
 		tok = token.CreateToken(token.BANG)
 		if lexer.isMatch('=') {
@@ -166,18 +217,16 @@ func (lexer *Lexer) scanToken() error {
 			tok = token.CreateToken(token.LARGER_EQUAL)
 		}
 
-	case '\n':
-		lexer.lineCount++
-	case ' ': // ignores empty space
-	case '\r': // ingores carriage return
-	case '\t': // ignores tab
-		break
-	default:
-
-		result := lexer.handleComment(char)
-		if result {
-			break
+	case COMMENT_CHAR:
+		if lexer.handleComment(char) {
+			return nil
 		}
+	default:
+		if isLetter(char) {
+			lexer.handleIdentifier()
+			return nil
+		}
+
 		return fmt.Errorf("unexpected character: %c", char)
 	}
 	if tok.Value != "" {
@@ -203,7 +252,6 @@ func (lexer *Lexer) Scan() ([]token.Token, error) {
 		if err != nil {
 			return lexer.tokens, err
 		}
-		lexer.advance()
 	}
 	lexer.tokens = append(lexer.tokens, token.CreateToken(token.EOF))
 	return lexer.tokens, nil

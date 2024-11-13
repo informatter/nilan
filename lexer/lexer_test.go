@@ -21,43 +21,6 @@ func runTest(t *testing.T, testName string, scanner *Lexer, expected []token.Tok
 	})
 }
 
-func TestComment(t *testing.T) {
-	testName := "TestComment"
-	expected := []token.Token{
-		token.CreateToken(token.EOF),
-	}
-	test :=
-		`
-	# fmt.Println()
-	# comment
-	`
-	scanner := CreateLexer(test)
-	runTest(t, testName, scanner, expected)
-}
-
-func TestOperatorsSuccess(t *testing.T) {
-	testName := "TestOperatorsSuccess"
-	expected := []token.Token{
-		token.CreateToken(token.EQUAL_EQUAL),
-		token.CreateToken(token.DIV),
-		token.CreateToken(token.ASSIGN),
-		token.CreateToken(token.MULT),
-		token.CreateToken(token.ADD),
-		token.CreateToken(token.LARGER),
-		token.CreateToken(token.SUB),
-		token.CreateToken(token.LESS),
-		token.CreateToken(token.NOT_EQUAL),
-		token.CreateToken(token.LESS_EQUAL),
-		token.CreateToken(token.LARGER_EQUAL),
-		token.CreateToken(token.BANG),
-		token.CreateToken(token.BANG),
-		token.CreateToken(token.EOF),
-	}
-	scanner := CreateLexer("==/=*+>-<!=<=>=!!")
-	runTest(t, testName, scanner, expected)
-
-}
-
 func TestScanSuccess(t *testing.T) {
 	testName := "TestScanSuccess"
 	expected := []token.Token{
@@ -69,12 +32,45 @@ func TestScanSuccess(t *testing.T) {
 		token.CreateToken(token.MULT),
 		token.CreateToken(token.SEMICOLON),
 		token.CreateToken(token.ADD),
+		token.CreateToken(token.BANG),
+		token.CreateToken(token.ASSIGN),
+		token.CreateToken(token.LESS),
+		token.CreateToken(token.EQUAL_EQUAL),
+		token.CreateToken(token.EQUAL_EQUAL),
+		token.CreateToken(token.EQUAL_EQUAL),
+		token.CreateToken(token.EQUAL_EQUAL),
 		token.CreateToken(token.NOT_EQUAL),
 		token.CreateToken(token.LESS_EQUAL),
+		token.CreateToken(token.LESS_EQUAL),
+		token.CreateToken(token.LARGER_EQUAL),
+		token.CreateToken(token.LARGER_EQUAL),
+		token.CreateToken(token.EQUAL_EQUAL),
+		token.CreateToken(token.NOT_EQUAL),
+		token.CreateLiteralToken(token.IDENTIFIER, "my_var"),
+		token.CreateToken(token.ASSIGN),
+		token.CreateToken(token.LCUR),
+		token.CreateToken(token.RCUR),
 		token.CreateToken(token.EOF),
 	}
 
-	scanner := CreateLexer("(){}**;+!=<=")
+	test := `
+	(){}
+	**;+
+	!
+	=
+	<
+	== == ==
+	==
+	!=
+	<= <=
+	>=
+	>===!=
+	# my_var = {}
+	# some comment # # # # 
+	my_var = {
+	}
+	`
+	scanner := CreateLexer(test)
 	runTest(t, testName, scanner, expected)
 
 }

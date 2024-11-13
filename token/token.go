@@ -87,6 +87,13 @@ func CreateToken(tokenType TokenType) Token {
 	}
 }
 
+func CreateLiteralToken(tokenType TokenType, value string) Token {
+	return Token{
+		TokenType: tokenType,
+		Value:     value,
+	}
+}
+
 // implements the fmt.Stringer interface to customize
 // how the Token is rendered in the console.
 func (t Token) String() string {

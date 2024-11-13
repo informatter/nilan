@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"nilan/lexer"
 	"os"
-	"strings"
 )
 
 func main() {
@@ -19,13 +18,11 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		if cleanedInput == "exit" {
+		if input == "exit" {
 			os.Exit(0)
 		}
 
-		scanner := lexer.Lexer{
-			Input: cleanedInput,
-		}
+		scanner := lexer.CreateLexer(cleanedInput)
 
 		tokens, err := scanner.Scan()
 		if err != nil {
