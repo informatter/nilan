@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"nilan/lexer"
 	"os"
+	"strings"
 )
 
 func main() {
