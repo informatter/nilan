@@ -34,17 +34,17 @@ const (
 	EOF = "EOF"
 
 	// keywords
-	FUNC   = "fn"
-	CONST  = "const"
-	VAR    = "var"
-	RETURN = "return"
-	IF     = "if"
-	ELSE   = "else"
-	ELIF   = "elif"
-	BREAK  = "break"
-	TRUE   = "true"
-	FALSE  = "false"
-	NULL   = "null"
+	FUNC   = "FUNCTION"
+	CONST  = "CONST"
+	VAR    = "VAR"
+	RETURN = "RETURN"
+	IF     = "IF"
+	ELSE   = "ELSE"
+	ELIF   = "ELIF"
+	BREAK  = "BREAK"
+	TRUE   = "TRUE"
+	FALSE  = "FALSE"
+	NULL   = "NULL"
 )
 
 var KeyWords = map[string]TokenType{
