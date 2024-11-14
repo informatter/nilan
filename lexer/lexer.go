@@ -103,8 +103,6 @@ func (lexer *Lexer) handleComment(char byte) bool {
 		if result == 0 || result == '\n' {
 			break
 		}
-
-		// could be wrapped in to a method
 		lexer.advance()
 	}
 
@@ -119,10 +117,7 @@ func (lexer *Lexer) handleIdentifier() {
 		if result == 0 || result == '\n' || !isLetter(result) {
 			break
 		}
-
-		// could be wrapped in to a method
-		lexer.position = lexer.readPosition
-		lexer.readPosition++
+		lexer.advance()
 	}
 
 	substring := lexer.Input[initPos:lexer.readPosition]
