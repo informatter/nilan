@@ -123,15 +123,16 @@ func (lexer *Lexer) handleIdentifier() {
 	}
 
 	substring := lexer.Input[initPos:lexer.readPosition]
-	keyword, exists := token.KeyWords[substring]
-	var lexeme token.Token
-	if exists {
-		lexeme = token.CreateLiteralToken(keyword, substring)
-	} else {
-		lexeme = token.CreateLiteralToken(token.IDENTIFIER, substring)
+	lexeme := token.Token{
+		TokenType: token.IDENTIFIER,
+		Value:     substring,
 	}
-	lexer.tokens = append(lexer.tokens, lexeme)
 
+	if keywordType, exists := token.KeyWords[lexeme.Value]; exists {
+		lexeme.TokenType = keywordType
+	}
+
+	lexer.tokens = append(lexer.tokens, lexeme)
 }
 
 // Determines if the next character in the source code
@@ -171,7 +172,10 @@ func (lexer *Lexer) isWhiteSpace(char byte) bool {
 // Returns:
 //   - error: An error if an unexpected character is encountered, nil otherwise.
 func (lexer *Lexer) scanToken() error {
-
+	// TODO:
+	//	1. handle numbers: integers and decimals, handle negatives as well
+	//  2. Handle literal strings
+	//	3.
 	char := lexer.readChar()
 	if lexer.isWhiteSpace(char) {
 		return nil
@@ -203,7 +207,6 @@ func (lexer *Lexer) scanToken() error {
 		if lexer.isMatch('=') {
 			tok = token.CreateToken(token.EQUAL_EQUAL)
 		}
-		fmt.Println(tok)
 	case '!':
 		tok = token.CreateToken(token.BANG)
 		if lexer.isMatch('=') {

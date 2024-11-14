@@ -50,7 +50,6 @@ func TestScanLoose(t *testing.T) {
 		token.CreateToken(token.ASSIGN),
 		token.CreateToken(token.LCUR),
 		token.CreateToken(token.RCUR),
-		token.CreateLiteralToken(token.FUNC, "fn"),
 		token.CreateToken(token.EOF),
 	}
 
@@ -70,7 +69,6 @@ func TestScanLoose(t *testing.T) {
 	# some comment # # # # 
 	my_var = {
 	}
-	fn
 	`
 	scanner := CreateLexer(test)
 	runTest(t, testName, scanner, expected)
@@ -80,7 +78,7 @@ func TestScanLoose(t *testing.T) {
 func TestScanSourceCode(t *testing.T) {
 	testName := "TestScanSourceCode"
 	expected := []token.Token{
-		token.CreateLiteralToken(token.FUNC, token.FUNC),
+		token.CreateLiteralToken(token.FUNC, "fn"),
 		token.CreateLiteralToken(token.IDENTIFIER, "myFunction"),
 		token.CreateToken(token.LPA),
 		token.CreateLiteralToken(token.IDENTIFIER, "a"),
@@ -88,13 +86,13 @@ func TestScanSourceCode(t *testing.T) {
 		token.CreateLiteralToken(token.IDENTIFIER, "b"),
 		token.CreateToken(token.RPA),
 		token.CreateToken(token.LCUR),
-		token.CreateLiteralToken(token.RETURN, token.RETURN),
+		token.CreateLiteralToken(token.RETURN, "return"),
 		token.CreateLiteralToken(token.IDENTIFIER, "a"),
 		token.CreateToken(token.ADD),
 		token.CreateLiteralToken(token.IDENTIFIER, "b"),
 		token.CreateToken(token.RCUR),
-		token.CreateLiteralToken(token.VAR, token.VAR),
-		token.CreateLiteralToken(token.IDENTIFIER, "foo"),
+		token.CreateLiteralToken(token.VAR, "var"),
+		token.CreateLiteralToken(token.IDENTIFIER, "_foo_bar"),
 		token.CreateToken(token.EOF),
 	}
 
@@ -103,7 +101,7 @@ func TestScanSourceCode(t *testing.T) {
 	fn myFunction(a, b){
 		return a + b
 	}
-	var foo
+	var _foo_bar
 	
 	`
 	scanner := CreateLexer(test)
