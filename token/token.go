@@ -17,11 +17,6 @@ const (
 	// naming given by programmer i.e myVar, myFunc, add ..ect
 	IDENTIFIER = "IDENTIFIER"
 
-	// keywords reserved for nilan - i.e fn, const, return, if, else, break ...
-	KEYWORD = "KEYWORD"
-
-	INT = "INT"
-
 	// operators
 	ASSIGN       = "="
 	MULT         = "*"
@@ -37,16 +32,33 @@ const (
 	LARGER_EQUAL = ">="
 
 	EOF = "EOF"
+
+	// keywords
+	FUNC   = "fn"
+	CONST  = "const"
+	VAR    = "var"
+	RETURN = "return"
+	IF     = "if"
+	ELSE   = "else"
+	ELIF   = "elif"
+	BREAK  = "break"
+	TRUE   = "true"
+	FALSE  = "false"
+	NULL   = "null"
 )
 
-var KeyWords = map[string]string{
-	"fun":    "fun",
-	"const":  "const",
-	"return": "return",
-	"if":     "if",
-	"else":   "else",
-	"elif":   "elif",
-	"break":  "break",
+var KeyWords = map[string]TokenType{
+	"fn":     FUNC,
+	"var":    VAR,
+	"const":  CONST,
+	"return": RETURN,
+	"if":     IF,
+	"else":   ELSE,
+	"elif":   ELIF,
+	"break":  BREAK,
+	"false":  FALSE,
+	"true":   TRUE,
+	"null":   NULL,
 }
 
 var tokenTypes = map[TokenType]string{
@@ -79,7 +91,6 @@ type Token struct {
 }
 
 func CreateToken(tokenType TokenType) Token {
-
 	value := tokenTypes[tokenType]
 	return Token{
 		TokenType: tokenType,

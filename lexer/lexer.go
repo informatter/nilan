@@ -109,6 +109,8 @@ func (lexer *Lexer) handleComment(char byte) bool {
 	return true
 }
 
+// handleIdentifier processes a user identifier or a
+// language keyword in the source code.
 func (lexer *Lexer) handleIdentifier() {
 
 	initPos := lexer.position
@@ -121,7 +123,13 @@ func (lexer *Lexer) handleIdentifier() {
 	}
 
 	substring := lexer.Input[initPos:lexer.readPosition]
-	lexeme := token.CreateLiteralToken(token.IDENTIFIER, substring)
+	keyword, exists := token.KeyWords[substring]
+	var lexeme token.Token
+	if exists {
+		lexeme = token.CreateLiteralToken(keyword, substring)
+	} else {
+		lexeme = token.CreateLiteralToken(token.IDENTIFIER, substring)
+	}
 	lexer.tokens = append(lexer.tokens, lexeme)
 
 }

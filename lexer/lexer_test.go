@@ -21,8 +21,8 @@ func runTest(t *testing.T, testName string, scanner *Lexer, expected []token.Tok
 	})
 }
 
-func TestScanSuccess(t *testing.T) {
-	testName := "TestScanSuccess"
+func TestScanLoose(t *testing.T) {
+	testName := "TestScanLoose"
 	expected := []token.Token{
 		token.CreateToken(token.LPA),
 		token.CreateToken(token.RPA),
@@ -50,6 +50,7 @@ func TestScanSuccess(t *testing.T) {
 		token.CreateToken(token.ASSIGN),
 		token.CreateToken(token.LCUR),
 		token.CreateToken(token.RCUR),
+		token.CreateLiteralToken(token.FUNC, "fn"),
 		token.CreateToken(token.EOF),
 	}
 
@@ -69,6 +70,41 @@ func TestScanSuccess(t *testing.T) {
 	# some comment # # # # 
 	my_var = {
 	}
+	fn
+	`
+	scanner := CreateLexer(test)
+	runTest(t, testName, scanner, expected)
+
+}
+
+func TestScanSourceCode(t *testing.T) {
+	testName := "TestScanSourceCode"
+	expected := []token.Token{
+		token.CreateLiteralToken(token.FUNC, token.FUNC),
+		token.CreateLiteralToken(token.IDENTIFIER, "myFunction"),
+		token.CreateToken(token.LPA),
+		token.CreateLiteralToken(token.IDENTIFIER, "a"),
+		token.CreateToken(token.COMMA),
+		token.CreateLiteralToken(token.IDENTIFIER, "b"),
+		token.CreateToken(token.RPA),
+		token.CreateToken(token.LCUR),
+		token.CreateLiteralToken(token.RETURN, token.RETURN),
+		token.CreateLiteralToken(token.IDENTIFIER, "a"),
+		token.CreateToken(token.ADD),
+		token.CreateLiteralToken(token.IDENTIFIER, "b"),
+		token.CreateToken(token.RCUR),
+		token.CreateLiteralToken(token.VAR, token.VAR),
+		token.CreateLiteralToken(token.IDENTIFIER, "foo"),
+		token.CreateToken(token.EOF),
+	}
+
+	test := `
+
+	fn myFunction(a, b){
+		return a + b
+	}
+	var foo
+	
 	`
 	scanner := CreateLexer(test)
 	runTest(t, testName, scanner, expected)
