@@ -31,6 +31,9 @@ const (
 	LARGER       = ">"
 	LARGER_EQUAL = ">="
 
+	FLOAT = "FLOAT"
+	INT = "INT"
+
 	EOF = "EOF"
 
 	// keywords
