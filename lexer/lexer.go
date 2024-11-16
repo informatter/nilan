@@ -136,6 +136,15 @@ func (lexer *Lexer) handleComment(char byte) bool {
 	return true
 }
 
+// handleNumber processes and tokenizes a number in the input string.
+// It handles both integer and floating-point numbers, including negative numbers.
+//
+// The method scans the input from the current position, identifying valid number formats.
+// It supports the following number formats:
+// - Integers: e.g., 123, -456
+// - Floating-point numbers: e.g., 3.14, -0.5
+//
+// Returns an error if an invalid number format is encountered.
 func (lexer *Lexer) handleNumber() error {
 	initPos := lexer.position
 	decimalCount := 0
@@ -162,8 +171,6 @@ func (lexer *Lexer) handleNumber() error {
 		}
 		if result == '-' {
 			if isNegative {
-				fmt.Printf("found more than one negative!")
-				fmt.Println("")
 				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
 			}
 
@@ -174,8 +181,6 @@ func (lexer *Lexer) handleNumber() error {
 			}
 
 			if negativeCount == 1 {
-				fmt.Printf("found more than one negative!")
-				fmt.Println("")
 				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
 			}
 			negativeCount++
