@@ -3,6 +3,7 @@ package lexer
 import (
 	"fmt"
 	"nilan/token"
+	"strconv"
 )
 
 const (
@@ -19,6 +20,26 @@ type Lexer struct {
 
 func isLetter(char byte) bool {
 	return 'a' <= char && char <= 'z' || 'A' <= char && char <= 'Z' || char == '_'
+}
+
+func isNumber(char byte) bool{
+	return '0' <=char && char <='9'
+}
+
+
+func convertToInt(s string) (int, error) {
+    num, err := strconv.Atoi(s)
+    if err != nil {
+        return 0, err
+    }
+    return num, nil
+}
+func convertTofloat64(s string) (float64, error) {
+    num, err := strconv.ParseFloat(s,64)
+    if err != nil {
+        return 0, err
+    }
+    return num, nil
 }
 
 // Initializes and returns a new Lexer instance.
@@ -82,6 +103,13 @@ func (lexer *Lexer) peek() byte {
 	return lexer.Input[lexer.readPosition]
 }
 
+func (lexer *Lexer) peekNext() byte {
+	if lexer.readPosition + 1 >= len(lexer.Input){
+		return 0
+	}
+	return lexer.Input[lexer.readPosition + 1]
+}
+
 // handleComment processes a comment in the input stream.
 //
 // This method is responsible for handling comments in the lexical analysis.
@@ -107,6 +135,66 @@ func (lexer *Lexer) handleComment(char byte) bool {
 	}
 
 	return true
+}
+
+func (lexer *Lexer) handleNumber() error{
+	initPos := lexer.position
+	decimalCount :=0
+	negativeCount := 0
+	isNegative := false
+	if lexer.Input[lexer.position] == '-'{
+		isNegative  =true
+	}
+	for {
+		result := lexer.peek()
+		if result == 0 || result == '\n' || !isNumber(result) && result != '.' && result != '-' {
+			break
+		}
+		if result == '.'{
+			// handles numbers such as 1.
+			if lexer.peekNext() == 0{
+				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+			}
+			// handles numbers such as 1.1.
+			if decimalCount ==1{
+				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+			}
+			decimalCount ++
+		}
+		if result == '-'{
+			if isNegative{
+				fmt.Printf("found more than one negative!")
+				fmt.Println("")
+				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+			}
+			
+			pNextResult := lexer.peekNext()
+			// handles numbers such as 2-2 or 2-!
+			if pNextResult == 0 || isNumber(pNextResult) ||  !isNumber(pNextResult){
+				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+			}
+			
+			if negativeCount ==1{
+				fmt.Printf("found more than one negative!")
+				fmt.Println("")
+				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+			}
+			negativeCount ++
+			
+		}
+		
+		lexer.advance()	
+	}
+	substring := lexer.Input[initPos:lexer.readPosition]
+	var tokenType token.TokenType
+	if decimalCount ==0{
+		tokenType = token.INT
+	}else{
+		tokenType = token.FLOAT
+	}
+	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(tokenType,substring))
+	
+	return nil
 }
 
 // handleIdentifier processes a user identifier or a
@@ -199,6 +287,13 @@ func (lexer *Lexer) scanToken() error {
 	case '+':
 		tok = token.CreateToken(token.ADD)
 	case '-':
+		if isNumber(lexer.peek()){
+			err := lexer.handleNumber()
+			if err !=nil{
+				return err
+			}
+			return nil
+		}
 		tok = token.CreateToken(token.SUB)
 	case '/':
 		tok = token.CreateToken(token.DIV)
@@ -232,8 +327,15 @@ func (lexer *Lexer) scanToken() error {
 			lexer.handleIdentifier()
 			return nil
 		}
+		if isNumber(char){
+			err := lexer.handleNumber()
+			if err !=nil{
+				return err
+			}
+			return nil
+		}
 
-		return fmt.Errorf("unexpected character: %c", char)
+		return fmt.Errorf("unexpected character: %c\nline: %v", char, lexer.lineCount)
 	}
 	if tok.Value != "" {
 		lexer.tokens = append(lexer.tokens, tok)
