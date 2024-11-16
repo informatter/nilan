@@ -32,7 +32,7 @@ const (
 	LARGER_EQUAL = ">="
 
 	FLOAT = "FLOAT"
-	INT = "INT"
+	INT   = "INT"
 
 	EOF = "EOF"
 

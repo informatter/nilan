@@ -22,24 +22,23 @@ func isLetter(char byte) bool {
 	return 'a' <= char && char <= 'z' || 'A' <= char && char <= 'Z' || char == '_'
 }
 
-func isNumber(char byte) bool{
-	return '0' <=char && char <='9'
+func isNumber(char byte) bool {
+	return '0' <= char && char <= '9'
 }
-
 
 func convertToInt(s string) (int, error) {
-    num, err := strconv.Atoi(s)
-    if err != nil {
-        return 0, err
-    }
-    return num, nil
+	num, err := strconv.Atoi(s)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
 }
 func convertTofloat64(s string) (float64, error) {
-    num, err := strconv.ParseFloat(s,64)
-    if err != nil {
-        return 0, err
-    }
-    return num, nil
+	num, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
 }
 
 // Initializes and returns a new Lexer instance.
@@ -104,10 +103,10 @@ func (lexer *Lexer) peek() byte {
 }
 
 func (lexer *Lexer) peekNext() byte {
-	if lexer.readPosition + 1 >= len(lexer.Input){
+	if lexer.readPosition+1 >= len(lexer.Input) {
 		return 0
 	}
-	return lexer.Input[lexer.readPosition + 1]
+	return lexer.Input[lexer.readPosition+1]
 }
 
 // handleComment processes a comment in the input stream.
@@ -137,63 +136,63 @@ func (lexer *Lexer) handleComment(char byte) bool {
 	return true
 }
 
-func (lexer *Lexer) handleNumber() error{
+func (lexer *Lexer) handleNumber() error {
 	initPos := lexer.position
-	decimalCount :=0
+	decimalCount := 0
 	negativeCount := 0
 	isNegative := false
-	if lexer.Input[lexer.position] == '-'{
-		isNegative  =true
+	if lexer.Input[lexer.position] == '-' {
+		isNegative = true
 	}
 	for {
 		result := lexer.peek()
 		if result == 0 || result == '\n' || !isNumber(result) && result != '.' && result != '-' {
 			break
 		}
-		if result == '.'{
+		if result == '.' {
 			// handles numbers such as 1.
-			if lexer.peekNext() == 0{
-				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+			if lexer.peekNext() == 0 {
+				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
 			}
 			// handles numbers such as 1.1.
-			if decimalCount ==1{
-				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+			if decimalCount == 1 {
+				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
 			}
-			decimalCount ++
+			decimalCount++
 		}
-		if result == '-'{
-			if isNegative{
+		if result == '-' {
+			if isNegative {
 				fmt.Printf("found more than one negative!")
 				fmt.Println("")
-				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
 			}
-			
+
 			pNextResult := lexer.peekNext()
 			// handles numbers such as 2-2 or 2-!
-			if pNextResult == 0 || isNumber(pNextResult) ||  !isNumber(pNextResult){
-				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+			if pNextResult == 0 || isNumber(pNextResult) || !isNumber(pNextResult) {
+				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
 			}
-			
-			if negativeCount ==1{
+
+			if negativeCount == 1 {
 				fmt.Printf("found more than one negative!")
 				fmt.Println("")
-				return fmt.Errorf("invalid number in line: %v",lexer.lineCount)
+				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
 			}
-			negativeCount ++
-			
+			negativeCount++
+
 		}
-		
-		lexer.advance()	
+
+		lexer.advance()
 	}
 	substring := lexer.Input[initPos:lexer.readPosition]
 	var tokenType token.TokenType
-	if decimalCount ==0{
+	if decimalCount == 0 {
 		tokenType = token.INT
-	}else{
+	} else {
 		tokenType = token.FLOAT
 	}
-	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(tokenType,substring))
-	
+	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(tokenType, substring))
+
 	return nil
 }
 
@@ -261,8 +260,8 @@ func (lexer *Lexer) isWhiteSpace(char byte) bool {
 //   - error: An error if an unexpected character is encountered, nil otherwise.
 func (lexer *Lexer) scanToken() error {
 	// TODO:
-	//	1. handle numbers: integers and decimals, handle negatives as well
-	//  2. Handle literal strings
+	//	1. Handle literal strings
+	//  2.
 	//	3.
 	char := lexer.readChar()
 	if lexer.isWhiteSpace(char) {
@@ -287,9 +286,9 @@ func (lexer *Lexer) scanToken() error {
 	case '+':
 		tok = token.CreateToken(token.ADD)
 	case '-':
-		if isNumber(lexer.peek()){
+		if isNumber(lexer.peek()) {
 			err := lexer.handleNumber()
-			if err !=nil{
+			if err != nil {
 				return err
 			}
 			return nil
@@ -327,9 +326,9 @@ func (lexer *Lexer) scanToken() error {
 			lexer.handleIdentifier()
 			return nil
 		}
-		if isNumber(char){
+		if isNumber(char) {
 			err := lexer.handleNumber()
-			if err !=nil{
+			if err != nil {
 				return err
 			}
 			return nil
