@@ -6,15 +6,10 @@ import (
 	"io"
 	"nilan/lexer"
 	"os"
-	"os/user"
 )
 
 func main() {
-	user, err := user.Current()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("\n\nHi %s Welcome to Nilan!\n\n", user.Username)
+	fmt.Println("\n\nWelcome to Nilan!")
 	repl(os.Stdin, os.Stdout)
 }
 
