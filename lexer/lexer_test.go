@@ -93,6 +93,20 @@ func TestScanSourceCode(t *testing.T) {
 		token.CreateToken(token.RCUR),
 		token.CreateLiteralToken(token.VAR, "var"),
 		token.CreateLiteralToken(token.IDENTIFIER, "_foo_bar"),
+		token.CreateToken(token.ASSIGN),
+		token.CreateLiteralToken(token.FLOAT, "0.000001"),
+		token.CreateLiteralToken(token.VAR, "var"),
+		token.CreateLiteralToken(token.IDENTIFIER, "myInt"),
+		token.CreateToken(token.ASSIGN),
+		token.CreateLiteralToken(token.INT, "123"),
+		token.CreateLiteralToken(token.VAR, "var"),
+		token.CreateLiteralToken(token.IDENTIFIER, "myNegativeInt"),
+		token.CreateToken(token.ASSIGN),
+		token.CreateLiteralToken(token.INT, "-123"),
+		token.CreateLiteralToken(token.VAR, "var"),
+		token.CreateLiteralToken(token.IDENTIFIER, "myNegativeFloat"),
+		token.CreateToken(token.ASSIGN),
+		token.CreateLiteralToken(token.FLOAT, "-0.01"),
 		token.CreateToken(token.EOF),
 	}
 
@@ -101,7 +115,10 @@ func TestScanSourceCode(t *testing.T) {
 	fn myFunction(a, b){
 		return a + b
 	}
-	var _foo_bar
+	var _foo_bar = 0.000001
+	var myInt = 123
+	var myNegativeInt = -123
+	var myNegativeFloat = -0.01
 	
 	`
 	scanner := CreateLexer(test)
