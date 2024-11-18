@@ -227,6 +227,32 @@ func (lexer *Lexer) handleIdentifier() {
 	lexer.tokens = append(lexer.tokens, lexeme)
 }
 
+func (lexer *Lexer) handleStringLiteral() error{
+
+	initPos := lexer.position
+	isClosed := false
+	for {
+		result := lexer.peek()
+		if result == 0 || result == '\n' {
+			break
+		}
+
+		lexer.advance()
+		if result == '"'{
+			isClosed = true
+			break
+		}
+	}
+
+
+	if !isClosed {
+		return fmt.Errorf("unclosed string literal: %s\nline: %v", lexer.Input[initPos+1:lexer.readPosition], lexer.lineCount)
+	}
+	substring := lexer.Input[initPos+1:lexer.position]
+	lexer.tokens = append(lexer.tokens,token.CreateLiteralToken(token.STRING, substring))
+	return nil
+}
+
 // Determines if the next character in the source code
 // matches the `expected` character.
 func (lexer *Lexer) isMatch(expected byte) bool {
@@ -320,6 +346,11 @@ func (lexer *Lexer) scanToken() error {
 		tok = token.CreateToken(token.LARGER)
 		if lexer.isMatch('=') {
 			tok = token.CreateToken(token.LARGER_EQUAL)
+		}
+	case '"':
+		err :=lexer.handleStringLiteral()
+		if err !=nil{
+			return err
 		}
 
 	case COMMENT_CHAR:
