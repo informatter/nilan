@@ -1,6 +1,7 @@
 package lexer
 
 import (
+
 	"nilan/token"
 	"reflect"
 	"testing"
@@ -75,6 +76,81 @@ func TestScanLoose(t *testing.T) {
 
 }
 
+func TestLiteralStrings(t *testing.T){
+	testName := "TestLiteralStrings"
+
+	
+	expected := []token.Token{
+		token.CreateLiteralToken(token.VAR, "var"),
+		token.CreateLiteralToken(token.IDENTIFIER, "myString"),
+		token.CreateToken(token.ASSIGN),
+		token.CreateLiteralToken(token.STRING, "hellow"),
+		token.CreateLiteralToken(token.STRING, "hi"),
+		token.CreateLiteralToken(token.VAR, "var"),
+		token.CreateLiteralToken(token.IDENTIFIER, "tabedString"),
+		token.CreateToken(token.ASSIGN),
+		token.CreateLiteralToken(token.STRING, "tabed		"),
+		token.CreateToken(token.EOF),
+	}
+	test := `
+	var myString = "hellow" "hi"
+	var tabedString = "tabed		"
+	`
+	scanner := CreateLexer(test)
+	runTest(t, testName, scanner, expected)
+}
+func TestHandleStringLiteralErrors(t *testing.T) {
+    tests := []struct {
+        name    string
+        input   string
+        wantErr bool
+        errMsg  string
+    }{
+        {
+            name:    "Unclosed string literal",
+            input:   `var c ="unclosed`,
+            wantErr: true,
+            errMsg:  "unclosed string literal: unclosed\nline: 0",
+        },
+        {
+            name:    "String literal with newline",
+            input:   "\"new\nline\"",
+            wantErr: true,
+            errMsg:  "unclosed string literal: new\nline: 0",
+        },
+        {
+            name:    "Only opening quote",
+            input:   `"`,
+            wantErr: true,
+            errMsg:  "unclosed string literal: \nline: 0",
+        },
+        {
+            name:    "String literal at end of input",
+            input:   `hello "world`,
+            wantErr: true,
+            errMsg:  "unclosed string literal: world\nline: 0",
+        },
+
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            scanner := CreateLexer(tt.input)
+
+            _, err := scanner.Scan()
+            
+			if err == nil {
+				t.Errorf("handleStringLiteral() error = nil, wantErr %v", tt.wantErr)
+				return
+			}
+			if err.Error() != tt.errMsg {
+				t.Errorf("handleStringLiteral() error = %v, wantErr %v", err, tt.errMsg)
+			}
+          
+        })
+    }
+}
+
 func TestScanSourceCode(t *testing.T) {
 	testName := "TestScanSourceCode"
 	expected := []token.Token{
@@ -107,11 +183,14 @@ func TestScanSourceCode(t *testing.T) {
 		token.CreateLiteralToken(token.IDENTIFIER, "myNegativeFloat"),
 		token.CreateToken(token.ASSIGN),
 		token.CreateLiteralToken(token.FLOAT, "-0.01"),
+		token.CreateLiteralToken(token.VAR, "var"),
+		token.CreateLiteralToken(token.IDENTIFIER, "myString"),
+		token.CreateToken(token.ASSIGN),
+		token.CreateLiteralToken(token.STRING, "hellow"),
 		token.CreateToken(token.EOF),
 	}
 
 	test := `
-
 	fn myFunction(a, b){
 		return a + b
 	}
@@ -119,8 +198,9 @@ func TestScanSourceCode(t *testing.T) {
 	var myInt = 123
 	var myNegativeInt = -123
 	var myNegativeFloat = -0.01
-	
+	var myString = "hellow"
 	`
+
 	scanner := CreateLexer(test)
 	runTest(t, testName, scanner, expected)
 
