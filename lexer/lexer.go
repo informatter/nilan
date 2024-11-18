@@ -294,10 +294,7 @@ func (lexer *Lexer) isWhiteSpace(char byte) bool {
 // Returns:
 //   - error: An error if an unexpected character is encountered, nil otherwise.
 func (lexer *Lexer) scanToken() error {
-	// TODO:
-	//	1. Handle literal strings
-	//  2.
-	//	3.
+
 	char := lexer.readChar()
 	if lexer.isWhiteSpace(char) {
 		return nil
