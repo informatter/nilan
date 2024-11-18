@@ -16,7 +16,7 @@ const (
 
 	// naming given by programmer i.e myVar, myFunc, add ..ect
 	IDENTIFIER = "IDENTIFIER"
-	STRING = "STRING"
+	STRING     = "STRING"
 
 	// operators
 	ASSIGN       = "="

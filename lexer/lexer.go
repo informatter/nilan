@@ -232,7 +232,7 @@ func (lexer *Lexer) handleIdentifier() {
 // Returns:
 //   - nil if the string literal is properly closed and processed
 //   - error if the string literal is unclosed or has new lines
-func (lexer *Lexer) handleStringLiteral() error{
+func (lexer *Lexer) handleStringLiteral() error {
 
 	initPos := lexer.position
 	isClosed := false
@@ -243,7 +243,7 @@ func (lexer *Lexer) handleStringLiteral() error{
 		}
 
 		lexer.advance()
-		if result == '"'{
+		if result == '"' {
 			isClosed = true
 			break
 		}
@@ -252,8 +252,8 @@ func (lexer *Lexer) handleStringLiteral() error{
 	if !isClosed {
 		return fmt.Errorf("unclosed string literal: %s\nline: %v", lexer.Input[initPos+1:lexer.readPosition], lexer.lineCount)
 	}
-	substring := lexer.Input[initPos+1:lexer.position]
-	lexer.tokens = append(lexer.tokens,token.CreateLiteralToken(token.STRING, substring))
+	substring := lexer.Input[initPos+1 : lexer.position]
+	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(token.STRING, substring))
 	return nil
 }
 
@@ -352,8 +352,8 @@ func (lexer *Lexer) scanToken() error {
 			tok = token.CreateToken(token.LARGER_EQUAL)
 		}
 	case '"':
-		err :=lexer.handleStringLiteral()
-		if err !=nil{
+		err := lexer.handleStringLiteral()
+		if err != nil {
 			return err
 		}
 

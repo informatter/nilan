@@ -1,7 +1,6 @@
 package lexer
 
 import (
-
 	"nilan/token"
 	"reflect"
 	"testing"
@@ -76,10 +75,9 @@ func TestScanLoose(t *testing.T) {
 
 }
 
-func TestLiteralStrings(t *testing.T){
+func TestLiteralStrings(t *testing.T) {
 	testName := "TestLiteralStrings"
 
-	
 	expected := []token.Token{
 		token.CreateLiteralToken(token.VAR, "var"),
 		token.CreateLiteralToken(token.IDENTIFIER, "myString"),
@@ -100,45 +98,44 @@ func TestLiteralStrings(t *testing.T){
 	runTest(t, testName, scanner, expected)
 }
 func TestHandleStringLiteralErrors(t *testing.T) {
-    tests := []struct {
-        name    string
-        input   string
-        wantErr bool
-        errMsg  string
-    }{
-        {
-            name:    "Unclosed string literal",
-            input:   `var c ="unclosed`,
-            wantErr: true,
-            errMsg:  "unclosed string literal: unclosed\nline: 0",
-        },
-        {
-            name:    "String literal with newline",
-            input:   "\"new\nline\"",
-            wantErr: true,
-            errMsg:  "unclosed string literal: new\nline: 0",
-        },
-        {
-            name:    "Only opening quote",
-            input:   `"`,
-            wantErr: true,
-            errMsg:  "unclosed string literal: \nline: 0",
-        },
-        {
-            name:    "String literal at end of input",
-            input:   `hello "world`,
-            wantErr: true,
-            errMsg:  "unclosed string literal: world\nline: 0",
-        },
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "Unclosed string literal",
+			input:   `var c ="unclosed`,
+			wantErr: true,
+			errMsg:  "unclosed string literal: unclosed\nline: 0",
+		},
+		{
+			name:    "String literal with newline",
+			input:   "\"new\nline\"",
+			wantErr: true,
+			errMsg:  "unclosed string literal: new\nline: 0",
+		},
+		{
+			name:    "Only opening quote",
+			input:   `"`,
+			wantErr: true,
+			errMsg:  "unclosed string literal: \nline: 0",
+		},
+		{
+			name:    "String literal at end of input",
+			input:   `hello "world`,
+			wantErr: true,
+			errMsg:  "unclosed string literal: world\nline: 0",
+		},
+	}
 
-    }
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scanner := CreateLexer(tt.input)
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            scanner := CreateLexer(tt.input)
+			_, err := scanner.Scan()
 
-            _, err := scanner.Scan()
-            
 			if err == nil {
 				t.Errorf("handleStringLiteral() error = nil, wantErr %v", tt.wantErr)
 				return
@@ -146,9 +143,9 @@ func TestHandleStringLiteralErrors(t *testing.T) {
 			if err.Error() != tt.errMsg {
 				t.Errorf("handleStringLiteral() error = %v, wantErr %v", err, tt.errMsg)
 			}
-          
-        })
-    }
+
+		})
+	}
 }
 
 func TestScanSourceCode(t *testing.T) {
