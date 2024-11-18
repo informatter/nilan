@@ -227,6 +227,11 @@ func (lexer *Lexer) handleIdentifier() {
 	lexer.tokens = append(lexer.tokens, lexeme)
 }
 
+// handleStringLiteral processes string literals in the input.
+// Currently multi-line strings are not handled
+// Returns:
+//   - nil if the string literal is properly closed and processed
+//   - error if the string literal is unclosed or has new lines
 func (lexer *Lexer) handleStringLiteral() error{
 
 	initPos := lexer.position
@@ -243,7 +248,6 @@ func (lexer *Lexer) handleStringLiteral() error{
 			break
 		}
 	}
-
 
 	if !isClosed {
 		return fmt.Errorf("unclosed string literal: %s\nline: %v", lexer.Input[initPos+1:lexer.readPosition], lexer.lineCount)
