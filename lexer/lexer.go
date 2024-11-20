@@ -141,8 +141,9 @@ func (lexer *Lexer) handleComment(char byte) bool {
 //
 // The method scans the input from the current position, identifying valid number formats.
 // It supports the following number formats:
-// - Integers: e.g., 123, -456
-// - Floating-point numbers: e.g., 3.14, -0.5
+//
+//   - Integers: e.g., 123, -456
+//   - Floating-point numbers: e.g., 3.14, -0.5
 //
 // Returns an error if an invalid number format is encountered.
 func (lexer *Lexer) handleNumber() error {
@@ -228,7 +229,7 @@ func (lexer *Lexer) handleIdentifier() {
 }
 
 // handleStringLiteral processes string literals in the input.
-// Currently multi-line strings are not handled
+//
 // Returns:
 //   - nil if the string literal is properly closed and processed
 //   - error if the string literal is unclosed or has new lines
@@ -238,7 +239,7 @@ func (lexer *Lexer) handleStringLiteral() error {
 	isClosed := false
 	for {
 		result := lexer.peek()
-		if result == 0 || result == '\n' {
+		if result == 0 {
 			break
 		}
 
@@ -300,6 +301,8 @@ func (lexer *Lexer) scanToken() error {
 		return nil
 	}
 	var tok token.Token
+	fmt.Printf("char: %c", char)
+	fmt.Println("")
 	switch char {
 	case '(':
 		tok = token.CreateToken(token.LPA)

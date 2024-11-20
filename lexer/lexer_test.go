@@ -77,7 +77,10 @@ func TestScanLoose(t *testing.T) {
 
 func TestLiteralStrings(t *testing.T) {
 	testName := "TestLiteralStrings"
-
+	multiLine := `
+	 this is a multi line comment
+	 which continues here
+	`
 	expected := []token.Token{
 		token.CreateLiteralToken(token.VAR, "var"),
 		token.CreateLiteralToken(token.IDENTIFIER, "myString"),
@@ -88,11 +91,16 @@ func TestLiteralStrings(t *testing.T) {
 		token.CreateLiteralToken(token.IDENTIFIER, "tabedString"),
 		token.CreateToken(token.ASSIGN),
 		token.CreateLiteralToken(token.STRING, "tabed		"),
+		token.CreateLiteralToken(token.STRING, multiLine),
 		token.CreateToken(token.EOF),
 	}
 	test := `
 	var myString = "hellow" "hi"
 	var tabedString = "tabed		"
+	"
+	 this is a multi line comment
+	 which continues here
+	"
 	`
 	scanner := CreateLexer(test)
 	runTest(t, testName, scanner, expected)
@@ -109,12 +117,6 @@ func TestHandleStringLiteralErrors(t *testing.T) {
 			input:   `var c ="unclosed`,
 			wantErr: true,
 			errMsg:  "unclosed string literal: unclosed\nline: 0",
-		},
-		{
-			name:    "String literal with newline",
-			input:   "\"new\nline\"",
-			wantErr: true,
-			errMsg:  "unclosed string literal: new\nline: 0",
 		},
 		{
 			name:    "Only opening quote",
