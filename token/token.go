@@ -39,6 +39,10 @@ const (
 
 	// keywords
 	FUNC   = "FUNCTION"
+	OR     = "OR"
+	AND    = "AND"
+	FOR    = "FOR"
+	WHILE  = "WHILE"
 	CONST  = "CONST"
 	VAR    = "VAR"
 	RETURN = "RETURN"
@@ -53,6 +57,10 @@ const (
 
 var KeyWords = map[string]TokenType{
 	"fn":     FUNC,
+	"or":     OR,
+	"and":    AND,
+	"while":  WHILE,
+	"for":    FOR,
 	"var":    VAR,
 	"const":  CONST,
 	"return": RETURN,

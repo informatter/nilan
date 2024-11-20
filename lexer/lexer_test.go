@@ -167,6 +167,15 @@ func TestScanSourceCode(t *testing.T) {
 		token.CreateLiteralToken(token.IDENTIFIER, "b"),
 		token.CreateToken(token.RCUR),
 		token.CreateLiteralToken(token.VAR, "var"),
+		token.CreateLiteralToken(token.IDENTIFIER, "result"),
+		token.CreateToken(token.ASSIGN),
+		token.CreateLiteralToken(token.IDENTIFIER, "myFunction"),
+		token.CreateToken(token.LPA),
+		token.CreateLiteralToken(token.INT, "2"),
+		token.CreateToken(token.ADD),
+		token.CreateLiteralToken(token.INT, "5"),
+		token.CreateToken(token.RPA),
+		token.CreateLiteralToken(token.VAR, "var"),
 		token.CreateLiteralToken(token.IDENTIFIER, "_foo_bar"),
 		token.CreateToken(token.ASSIGN),
 		token.CreateLiteralToken(token.FLOAT, "0.000001"),
@@ -186,18 +195,25 @@ func TestScanSourceCode(t *testing.T) {
 		token.CreateLiteralToken(token.IDENTIFIER, "myString"),
 		token.CreateToken(token.ASSIGN),
 		token.CreateLiteralToken(token.STRING, "hellow"),
+		token.CreateLiteralToken(token.IF, "if"),
+		token.CreateLiteralToken(token.AND, "and"),
+		token.CreateLiteralToken(token.OR, "or"),
+		token.CreateLiteralToken(token.WHILE, "while"),
+		token.CreateLiteralToken(token.FOR, "for"),
 		token.CreateToken(token.EOF),
 	}
-
 	test := `
 	fn myFunction(a, b){
 		return a + b
 	}
+	var result = myFunction(2+5)
 	var _foo_bar = 0.000001
 	var myInt = 123
 	var myNegativeInt = -123
 	var myNegativeFloat = -0.01
 	var myString = "hellow"
+
+	if and or while for
 	`
 
 	scanner := CreateLexer(test)
