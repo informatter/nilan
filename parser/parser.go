@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"nilan/token"
 )
 
@@ -23,6 +24,21 @@ var equalityTokenTypes = []token.TokenType{
 	token.EQUAL_EQUAL,
 }
 
+var termTokenTypes = []token.TokenType{
+	token.SUB,
+	token.ADD,
+}
+
+var factorExpressionTypes = []token.TokenType{
+	token.MULT,
+	token.DIV,
+}
+
+var unaryExpressionTypes = []token.TokenType{
+	token.BANG,
+	token.SUB,
+}
+
 type Parser struct {
 	tokens   []token.Token
 	position int
@@ -36,8 +52,8 @@ type Parser struct {
 // Parameters:
 //   - tokens: []token.Token
 //     The tokens created by the lexer.
-//	 - position: int
-//	   The position of the parser in respect to the current token being
+//   - position: int
+//     The position of the parser in respect to the current token being
 //     looked at.
 //
 // Returns:
@@ -119,40 +135,155 @@ func (parser *Parser) isMatch(tokenTypes []token.TokenType) bool {
 	return false
 }
 
-func (parser *Parser) expression() Expression {
+func (parser *Parser) Parse() (Expression, error) {
+	return parser.expression()
+}
+
+func (parser *Parser) expression() (Expression, error) {
 	return parser.equality()
 }
 
-// equality = comparison { ("!=" | "==") comparison }
-func (parser *Parser) equality() Expression {
+// Production rule:
+//   - equality = comparison { ("!=" | "==") comparison };
+//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+func (parser *Parser) equality() (Expression, error) {
 
-	exp := parser.comparison()
+	exp, err := parser.comparison()
+	if err != nil {
+		return nil, err
+	}
 	for parser.isMatch(equalityTokenTypes) {
 
 		operator := parser.previous()
-		right := parser.comparison()
+		right, err := parser.comparison()
+		if err != nil {
+			return nil, err
+		}
 		exp = Binary{
 			Left:     exp,
 			Operator: operator,
 			Right:    right,
 		}
 	}
-	return exp
+	return exp, nil
 }
 
-// comparison = term { (">" | ">=" | "<" | "<=") term }
-func (parser *Parser) comparison() Expression {
+// Production rule:
+//   - comparison = term { (">" | ">=" | "<" | "<=") term };
+//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+func (parser *Parser) comparison() (Expression, error) {
 
-	exp := parser.term()
+	exp, err := parser.term()
+	if err != nil {
+		return nil, err
+	}
 	for parser.isMatch(comparisonTokenTypes) {
 
 		operator := parser.previous()
-		right := parser.term()
+		right, err := parser.term()
+		if err != nil {
+			return nil, err
+		}
 		exp = Binary{
 			Left:     exp,
 			Operator: operator,
 			Right:    right,
 		}
 	}
-	return exp
+	return exp, nil
+}
+
+// Production rule:
+//   - term = factor { ("+" | "-") factor };
+//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+func (parser *Parser) term() (Expression, error) {
+	exp, err := parser.factor()
+	if err != nil {
+		return nil, err
+	}
+	for parser.isMatch(termTokenTypes) {
+		operator := parser.previous()
+		right, err := parser.factor()
+		if err != nil {
+			return nil, err
+		}
+		exp = Binary{
+			Left:     exp,
+			Operator: operator,
+			Right:    right,
+		}
+	}
+	return exp, nil
+}
+
+// Production rule:
+//   - factor = unary { ("+" | "-") unary };
+//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+func (parser *Parser) factor() (Expression, error) {
+	exp, err := parser.unary()
+	if err != nil {
+		return nil, err
+	}
+	for parser.isMatch(factorExpressionTypes) {
+		operator := parser.previous()
+		right, err := parser.unary()
+		if err != nil {
+			return nil, err
+		}
+		exp = Binary{
+			Left:     exp,
+			Operator: operator,
+			Right:    right,
+		}
+	}
+	return exp, nil
+}
+
+// Production rule:
+//   - unary =  ("!" | "-") unary  | primary;
+//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+func (parser *Parser) unary() (Expression, error) {
+	if parser.isMatch(unaryExpressionTypes) {
+		operator := parser.previous()
+		right, err := parser.unary()
+		if err != nil {
+			return nil, err
+		}
+		return Unary{
+			Operator: operator,
+			Right:    right,
+		}, nil
+	}
+	return parser.primary()
+}
+
+// Production rule:
+//   - primary =  ("FLOAT" | "INT" | "true" | "false" | "null") | "(" expression ")";
+//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+func (parser *Parser) primary() (Expression, error) {
+
+	if parser.isMatch([]token.TokenType{token.FALSE}) {
+		return Literal{Value: "false"}, nil
+	}
+	if parser.isMatch([]token.TokenType{token.NULL}) {
+		return Literal{Value: "null"}, nil
+	}
+	if parser.isMatch([]token.TokenType{token.TRUE}) {
+		return Literal{Value: "true"}, nil
+	}
+
+	// should IDENTIFIER be here as well?
+	if parser.isMatch([]token.TokenType{token.FLOAT, token.INT, token.STRING, token.IDENTIFIER}) {
+		return Literal{Value: parser.previous().Value}, nil
+	}
+
+	if parser.isMatch([]token.TokenType{token.LPA}) {
+		expr, err := parser.expression()
+		if err != nil {
+			return nil, err
+		}
+		return Grouping{Expression: expr}, nil
+	}
+
+	return nil, fmt.Errorf("unclosed expression encountered")
 }
