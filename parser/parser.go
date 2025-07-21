@@ -9,7 +9,7 @@ import (
 // https://en.wikipedia.org/wiki/Recursive_descent_parser
 
 //  A Recursive descent parser is a top-down parser because it starts from the top
-// grammar rule and works is way down in to the netsed sub-experessions before reaching
+// grammar rule and works its way down in to the nested sub-experessions before reaching
 // the leaves of the syntax tree (terminal rules)
 
 var comparisonTokenTypes = []token.TokenType{
