@@ -143,9 +143,7 @@ func (parser *Parser) expression() (Expression, error) {
 	return parser.equality()
 }
 
-// Production rule:
-//   - equality = comparison { ("!=" | "==") comparison };
-//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+
 func (parser *Parser) equality() (Expression, error) {
 
 	exp, err := parser.comparison()
@@ -168,9 +166,7 @@ func (parser *Parser) equality() (Expression, error) {
 	return exp, nil
 }
 
-// Production rule:
-//   - comparison = term { (">" | ">=" | "<" | "<=") term };
-//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+
 func (parser *Parser) comparison() (Expression, error) {
 
 	exp, err := parser.term()
@@ -193,9 +189,7 @@ func (parser *Parser) comparison() (Expression, error) {
 	return exp, nil
 }
 
-// Production rule:
-//   - term = factor { ("+" | "-") factor };
-//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+
 func (parser *Parser) term() (Expression, error) {
 	exp, err := parser.factor()
 	if err != nil {
@@ -216,9 +210,7 @@ func (parser *Parser) term() (Expression, error) {
 	return exp, nil
 }
 
-// Production rule:
-//   - factor = unary { ("+" | "-") unary };
-//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+
 func (parser *Parser) factor() (Expression, error) {
 	exp, err := parser.unary()
 	if err != nil {
@@ -239,9 +231,7 @@ func (parser *Parser) factor() (Expression, error) {
 	return exp, nil
 }
 
-// Production rule:
-//   - unary =  ("!" | "-") unary  | primary;
-//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+
 func (parser *Parser) unary() (Expression, error) {
 	if parser.isMatch(unaryExpressionTypes) {
 		operator := parser.previous()
@@ -257,9 +247,7 @@ func (parser *Parser) unary() (Expression, error) {
 	return parser.primary()
 }
 
-// Production rule:
-//   - primary =  ("FLOAT" | "INT" | "true" | "false" | "null") | "(" expression ")";
-//   - Note: production rule is in Extended Backus-Naur Form (EBNF) notation.
+
 func (parser *Parser) primary() (Expression, error) {
 
 	if parser.isMatch([]token.TokenType{token.FALSE}) {
