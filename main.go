@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"nilan/lexer"
+	"nilan/parser"
 	"os"
 )
 
@@ -33,6 +34,8 @@ func repl(in io.Reader, out io.Writer) {
 			fmt.Println(err)
 			continue
 		}
-		fmt.Println(tokens)
+		parser := parser.CreateParser(tokens)
+		ast, _ := parser.Parse()
+		fmt.Println(ast)
 	}
 }
