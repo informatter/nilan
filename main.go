@@ -34,8 +34,8 @@ func repl(in io.Reader, out io.Writer) {
 			fmt.Println(err)
 			continue
 		}
-		parser := parser.CreateParser(tokens)
+		parser := parser.Create(tokens)
 		ast, _ := parser.Parse()
-		fmt.Println(ast)
+		parser.Print(ast)
 	}
 }
