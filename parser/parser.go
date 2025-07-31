@@ -58,11 +58,18 @@ type Parser struct {
 //
 // Returns:
 //   - *Parser: A pointer to a newly created Parser instance.
-func CreateParser(tokens []token.Token) *Parser {
+func Create(tokens []token.Token) *Parser {
 	return &Parser{
 		tokens:   tokens,
 		position: 0,
 	}
+}
+
+// Prints the AST created by this Parser
+func (parser *Parser) Print(expression Expression) {
+
+	result := expression.Accept(astPrinter{})
+	fmt.Println(result)
 }
 
 // Peeks the token at the parser's current position,
@@ -136,13 +143,13 @@ func (parser *Parser) isMatch(tokenTypes []token.TokenType) bool {
 }
 
 func (parser *Parser) Parse() (Expression, error) {
-	return parser.expression()
+	ast, err := parser.expression()
+	return ast, err
 }
 
 func (parser *Parser) expression() (Expression, error) {
 	return parser.equality()
 }
-
 
 func (parser *Parser) equality() (Expression, error) {
 
@@ -162,10 +169,10 @@ func (parser *Parser) equality() (Expression, error) {
 			Operator: operator,
 			Right:    right,
 		}
+
 	}
 	return exp, nil
 }
-
 
 func (parser *Parser) comparison() (Expression, error) {
 
@@ -189,7 +196,6 @@ func (parser *Parser) comparison() (Expression, error) {
 	return exp, nil
 }
 
-
 func (parser *Parser) term() (Expression, error) {
 	exp, err := parser.factor()
 	if err != nil {
@@ -209,7 +215,6 @@ func (parser *Parser) term() (Expression, error) {
 	}
 	return exp, nil
 }
-
 
 func (parser *Parser) factor() (Expression, error) {
 	exp, err := parser.unary()
@@ -231,7 +236,6 @@ func (parser *Parser) factor() (Expression, error) {
 	return exp, nil
 }
 
-
 func (parser *Parser) unary() (Expression, error) {
 	if parser.isMatch(unaryExpressionTypes) {
 		operator := parser.previous()
@@ -246,7 +250,6 @@ func (parser *Parser) unary() (Expression, error) {
 	}
 	return parser.primary()
 }
-
 
 func (parser *Parser) primary() (Expression, error) {
 
@@ -270,7 +273,13 @@ func (parser *Parser) primary() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		return Grouping{Expression: expr}, nil
+		// Advances the parsers position by 1 unit after the expression
+		// inside the parenthesis is parsed. This guarantees that any other tokens
+		// after the expression are parsed
+		if parser.isMatch([]token.TokenType{token.RPA}) {
+
+			return Grouping{Expression: expr}, nil
+		}
 	}
 
 	return nil, fmt.Errorf("unclosed expression encountered")
