@@ -1,5 +1,8 @@
 package parser
-import ("nilan/token")
+
+import (
+	"nilan/token"
+)
 
 // Interface for all AST nodes to implement. All concrete implementations
 // must implement the Accept method.

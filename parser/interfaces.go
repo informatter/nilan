@@ -1,6 +1,5 @@
 package parser
 
-
 // An interface to be used to implement the Visitor
 // design pattern
 type Visitor interface {
