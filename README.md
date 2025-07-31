@@ -68,6 +68,9 @@ primary    = ( 'FLOAT' | 'INT' | 'true' | 'false' | 'null' ) | '(' , expression 
 
 > 💡 Currently, the grammar and parser support only basic constructs such as logical, arithmetic, unary operations, literals, and parenthesized expressions.
 
+This grammar is not left-recursive because none of the non-terminals start their production with themselves on the left side. Each rule begins with a different non-terminal or terminal before any recursion happens. For example, `equality` starts with `comparison`,`comparison` starts with `term`, etc...
+
+
 ### How to Read the Grammar
 
 Each line defines a **production rule** in the form:
