@@ -9,6 +9,8 @@ My goal is to learn more about how a programming language works under the hood a
 - [Crafting Interpreters](https://craftinginterpreters.com/), by Robert Nystrom
 - [Extended Backus-Naur Form (EBNF)](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form)
 - [Recursive Descent Parser](https://en.wikipedia.org/wiki/Recursive_descent_parser)
+- [Visitor Pattern](https://refactoring.guru/design-patterns/visitor/go/example)
+- [Operator Presedence](https://dear-computer.twodee.org/expressions/precedence.html)
 
 
 ## Current Grammar (ISO EBNF)
@@ -136,7 +138,7 @@ The grammar structure also defines **operator precedence** without needing extra
 | Highest                     | `()`, literals            | `primary`     |
 
 
-💡Each level of the grammar (from `equality` up to `primary`) ensures that lower-precedence operations are parsed before the highest-precedence ones. lower-precedence expressions are parsed first because they might contain sub-expressions of higher-presedence.
+💡Each level of the grammar (from `equality` up to `primary`) ensures that lower-precedence operations are parsed before the highest-precedence ones. lower-precedence expressions are parsed first because they might contain sub-expressions of higher-presedence. Furthermore, this is how its guaranteed that in expressions such as `5*5 + 10+2` multiplication is evaluated before addition: `(5*5) + 10+2`
 
 
 
