@@ -301,8 +301,6 @@ func (lexer *Lexer) scanToken() error {
 		return nil
 	}
 	var tok token.Token
-	fmt.Printf("char: %c", char)
-	fmt.Println("")
 	switch char {
 	case '(':
 		tok = token.CreateToken(token.LPA)
