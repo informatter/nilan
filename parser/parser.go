@@ -67,7 +67,6 @@ func Create(tokens []token.Token) *Parser {
 
 // Prints the AST created by this Parser
 func (parser *Parser) Print(expression Expression) {
-
 	result := expression.Accept(astPrinter{})
 	fmt.Println(result)
 }

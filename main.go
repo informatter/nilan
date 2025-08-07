@@ -4,9 +4,9 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"nilan/interpreter"
 	"nilan/lexer"
 	"nilan/parser"
-	"nilan/interpreter"
 	"os"
 )
 
@@ -39,8 +39,8 @@ func repl(in io.Reader, out io.Writer) {
 		ast, _ := parser.Parse()
 		interpreter := interpreter.Interpreter{}
 		parser.Print(ast)
-		result :=interpreter.Interpret(ast)
-		if result !=nil{
+		result := interpreter.Interpret(ast)
+		if result != nil {
 			fmt.Println(result)
 		}
 	}

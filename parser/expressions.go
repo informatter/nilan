@@ -10,7 +10,7 @@ type Expression interface {
 
 	// Calls a method on the Visitor interface
 	// which performs an action on an expression
-	Accept(v Visitor ) any
+	Accept(v Visitor) any
 }
 
 type Binary struct {
@@ -19,7 +19,7 @@ type Binary struct {
 	Operator token.Token
 }
 
-func (binary Binary) Accept(v Visitor)any {
+func (binary Binary) Accept(v Visitor) any {
 	return v.VisitBinary(binary)
 }
 
