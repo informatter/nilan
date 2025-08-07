@@ -3,9 +3,9 @@ package parser
 // An interface to be used to implement the Visitor
 // design pattern
 type Visitor interface {
-	VisitBinary(binary Binary) string
-	VisitUnary(unary Unary) string
-	VisitLiteral(literal Literal) string
-	VisitGrouping(grouping Grouping) string
+	VisitBinary(binary Binary) any
+	VisitUnary(unary Unary) any
+	VisitLiteral(literal Literal) any
+	VisitGrouping(grouping Grouping) any
 	// TODO: Add further grammar production rules.
 }

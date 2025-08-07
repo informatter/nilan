@@ -10,7 +10,7 @@ type Expression interface {
 
 	// Calls a method on the Visitor interface
 	// which performs an action on an expression
-	Accept(v Visitor) string
+	Accept(v Visitor ) any
 }
 
 type Binary struct {
@@ -19,7 +19,7 @@ type Binary struct {
 	Operator token.Token
 }
 
-func (binary Binary) Accept(v Visitor) string {
+func (binary Binary) Accept(v Visitor)any {
 	return v.VisitBinary(binary)
 }
 
@@ -28,7 +28,8 @@ type Unary struct {
 	Operator token.Token
 }
 
-func (unary Unary) Accept(v Visitor) string {
+func (unary Unary) Accept(v Visitor) any {
+
 	return v.VisitUnary(unary)
 }
 
@@ -36,7 +37,7 @@ type Literal struct {
 	Value string
 }
 
-func (literal Literal) Accept(v Visitor) string {
+func (literal Literal) Accept(v Visitor) any {
 	return v.VisitLiteral(literal)
 }
 
@@ -44,6 +45,6 @@ type Grouping struct {
 	Expression Expression
 }
 
-func (grouping Grouping) Accept(v Visitor) string {
+func (grouping Grouping) Accept(v Visitor) any {
 	return v.VisitGrouping(grouping)
 }
