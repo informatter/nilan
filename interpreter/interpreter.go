@@ -12,7 +12,7 @@ type Interpreter struct{}
 func (i Interpreter) Interpret(expression parser.Expression) any {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Nilan runtime error:\n", r)
+			fmt.Println(r)
 		}
 	}()
 	return i.evaluate(expression)
@@ -36,14 +36,14 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 		// This will allow string multiplication like Python which can be
 		// interesting?
 
-		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult)
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult, binary.Operator)
 
 		if err != nil {
 			panic(err.Error())
 		}
 		return leftValue * rightValue
 	case token.DIV:
-		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult)
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult,binary.Operator)
 
 		if err != nil {
 			panic(err.Error())
@@ -53,7 +53,7 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 	case token.SUB:
 		// TODO: There seems to be a weird bug in the lexers handleNumber method
 		// 2-2 yields an error while 2 - 2 yields 0
-		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult)
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult,binary.Operator)
 
 		if err != nil {
 			panic(err.Error())
@@ -78,7 +78,6 @@ func (i Interpreter) VisitGrouping(grouping parser.Grouping) any {
 }
 
 func (i Interpreter) evaluate(expression parser.Expression) any {
-	// var interpreter parser.Visitor[any] = Interpreter{}
 	return expression.Accept(Interpreter{})
 }
 
@@ -110,12 +109,14 @@ func literalToFloat64(value interface{}) (float64, error) {
 	}
 }
 
-func isOperandsNumeric(operator token.TokenType, left any, right any) (float64, float64, error) {
+func isOperandsNumeric(operator token.TokenType, left any, right any, token token.Token) (float64, float64, error) {
 
 	l, lerr := literalToFloat64(left)
 	r, rerr := literalToFloat64(right)
 	if lerr == nil && rerr == nil {
 		return l, r, nil
 	}
-	return 0, 0, fmt.Errorf("operands must be numeric values. '%s %s %s' is not allowed", left, operator, right)
+	message :=fmt.Sprintf("operands must be numeric values. '%s %s %s' is not allowed", left, operator, right)
+	error :=CreateRuntimeError(token.Line,token.Column,message)
+	return 0, 0, error
 }
