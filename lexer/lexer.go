@@ -16,7 +16,7 @@ type Lexer struct {
 	position     int
 	readPosition int
 	lineCount    int32
-	column	     int
+	column       int
 }
 
 func isLetter(char byte) bool {
@@ -54,7 +54,7 @@ func CreateLexer(input string) *Lexer {
 	return &Lexer{
 		Input:        input,
 		lineCount:    0,
-		column: 0,
+		column:       0,
 		position:     0,
 		readPosition: 0,
 	}
@@ -139,27 +139,29 @@ func (lexer *Lexer) handleComment(char byte) bool {
 	return true
 }
 
-// handleNumber processes and tokenizes a number in the input string.
-// It handles both integer and floating-point numbers, including negative numbers.
+// handleNumber scans a sequence of digits (and at most one decimal point) from
+// the input and creates an integer or floating-point literal token accordingly.
 //
-// The method scans the input from the current position, identifying valid number formats.
-// It supports the following number formats:
+// The method starts scanning from the current lexer position and continues
+// advancing until it encounters a character that is not a digit or a decimal
+// point (`.`). A decimal point is allowed only once within the number.
 //
-//   - Integers: e.g., 123, -456
-//   - Floating-point numbers: e.g., 3.14, -0.5
+// Validation rules:
+//   - A number ending with a decimal point (e.g., "1.") without further digits
+//     results in an error.
+//   - Multiple decimal points (e.g., "1.1.") are considered invalid and cause
+//     an error.
 //
-// Returns an error if an invalid number format is encountered.
+// Returns:
+//   - nil if the token was successfully created and added
+//   - an error if the number format is invalid
 func (lexer *Lexer) handleNumber() error {
 	initPos := lexer.position
 	decimalCount := 0
-	negativeCount := 0
-	isNegative := false
-	if lexer.Input[lexer.position] == '-' {
-		isNegative = true
-	}
+
 	for {
 		result := lexer.peek()
-		if result == 0 || result == '\n' || !isNumber(result) && result != '.' && result != '-' {
+		if result == 0 || result == '\n' || !isNumber(result) && result != '.' {
 			break
 		}
 		if result == '.' {
@@ -173,34 +175,19 @@ func (lexer *Lexer) handleNumber() error {
 			}
 			decimalCount++
 		}
-		if result == '-' {
-			if isNegative {
-				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
-			}
-
-			pNextResult := lexer.peekNext()
-			// handles numbers such as 2-2 or 2-!
-			if pNextResult == 0 || isNumber(pNextResult) || !isNumber(pNextResult) {
-				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
-			}
-
-			if negativeCount == 1 {
-				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
-			}
-			negativeCount++
-
-		}
 
 		lexer.advance()
 	}
 	substring := lexer.Input[initPos:lexer.readPosition]
-	var tokenType token.TokenType
+	var tok token.Token
 	if decimalCount == 0 {
-		tokenType = token.INT
+		result, _ := strconv.ParseInt(substring, 0, 64)
+		tok = token.CreateLiteralToken(token.INT, result, substring, lexer.lineCount, lexer.column)
 	} else {
-		tokenType = token.FLOAT
+		result, _ := strconv.ParseFloat(substring, 64)
+		tok = token.CreateLiteralToken(token.FLOAT, result, substring, lexer.lineCount, lexer.column)
 	}
-	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(tokenType, substring, lexer.lineCount, lexer.column))
+	lexer.tokens = append(lexer.tokens, tok)
 
 	return nil
 }
@@ -221,10 +208,10 @@ func (lexer *Lexer) handleIdentifier() {
 	substring := lexer.Input[initPos:lexer.readPosition]
 	lexeme := token.Token{
 		TokenType: token.IDENTIFIER,
-		Value:     substring,
+		Lexeme:    substring,
 	}
 
-	if keywordType, exists := token.KeyWords[lexeme.Value]; exists {
+	if keywordType, exists := token.KeyWords[lexeme.Lexeme]; exists {
 		lexeme.TokenType = keywordType
 	}
 
@@ -256,8 +243,9 @@ func (lexer *Lexer) handleStringLiteral() error {
 	if !isClosed {
 		return fmt.Errorf("unclosed string literal: %s\nline: %v", lexer.Input[initPos+1:lexer.readPosition], lexer.lineCount)
 	}
-	substring := lexer.Input[initPos+1 : lexer.position]
-	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(token.STRING, substring, lexer.lineCount, lexer.column))
+	literalValue := lexer.Input[initPos+1 : lexer.position]
+	lexeme := lexer.Input[initPos : lexer.position+1]
+	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(token.STRING, literalValue, lexeme, lexer.lineCount, lexer.column))
 	return nil
 }
 
@@ -285,7 +273,7 @@ func (lexer *Lexer) isWhiteSpace(char byte) bool {
 	}
 	if char == '\n' {
 		lexer.lineCount++
-		lexer.column=0
+		lexer.column = 0
 		return true
 	}
 	return false
@@ -307,51 +295,44 @@ func (lexer *Lexer) scanToken() error {
 	var tok token.Token
 	switch char {
 	case '(':
-		tok = token.CreateToken(token.LPA,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.LPA, lexer.lineCount, lexer.column)
 	case ')':
-		tok = token.CreateToken(token.RPA,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.RPA, lexer.lineCount, lexer.column)
 	case '{':
-		tok = token.CreateToken(token.LCUR,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.LCUR, lexer.lineCount, lexer.column)
 	case '}':
-		tok = token.CreateToken(token.RCUR,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.RCUR, lexer.lineCount, lexer.column)
 	case ';':
-		tok = token.CreateToken(token.SEMICOLON,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.SEMICOLON, lexer.lineCount, lexer.column)
 	case ',':
-		tok = token.CreateToken(token.COMMA,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.COMMA, lexer.lineCount, lexer.column)
 	case '*':
-		tok = token.CreateToken(token.MULT,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.MULT, lexer.lineCount, lexer.column)
 	case '+':
-		tok = token.CreateToken(token.ADD,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.ADD, lexer.lineCount, lexer.column)
 	case '-':
-		if isNumber(lexer.peek()) {
-			err := lexer.handleNumber()
-			if err != nil {
-				return err
-			}
-			return nil
-		}
-		tok = token.CreateToken(token.SUB,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.SUB, lexer.lineCount, lexer.column)
 	case '/':
-		tok = token.CreateToken(token.DIV,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.DIV, lexer.lineCount, lexer.column)
 	case '=':
-		tok = token.CreateToken(token.ASSIGN,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.ASSIGN, lexer.lineCount, lexer.column)
 		if lexer.isMatch('=') {
-			tok = token.CreateToken(token.EQUAL_EQUAL,lexer.lineCount, lexer.column)
+			tok = token.CreateToken(token.EQUAL_EQUAL, lexer.lineCount, lexer.column)
 		}
 	case '!':
-		tok = token.CreateToken(token.BANG,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.BANG, lexer.lineCount, lexer.column)
 		if lexer.isMatch('=') {
-			tok = token.CreateToken(token.NOT_EQUAL,lexer.lineCount, lexer.column)
+			tok = token.CreateToken(token.NOT_EQUAL, lexer.lineCount, lexer.column)
 		}
 	case '<':
-		tok = token.CreateToken(token.LESS,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.LESS, lexer.lineCount, lexer.column)
 		if lexer.isMatch('=') {
-			tok = token.CreateToken(token.LESS_EQUAL,lexer.lineCount, lexer.column)
+			tok = token.CreateToken(token.LESS_EQUAL, lexer.lineCount, lexer.column)
 		}
 	case '>':
-		tok = token.CreateToken(token.LARGER,lexer.lineCount, lexer.column)
+		tok = token.CreateToken(token.LARGER, lexer.lineCount, lexer.column)
 		if lexer.isMatch('=') {
-			tok = token.CreateToken(token.LARGER_EQUAL,lexer.lineCount, lexer.column)
+			tok = token.CreateToken(token.LARGER_EQUAL, lexer.lineCount, lexer.column)
 		}
 	case '"':
 		err := lexer.handleStringLiteral()
@@ -378,7 +359,7 @@ func (lexer *Lexer) scanToken() error {
 
 		return fmt.Errorf("unexpected character: %c\nline: %v", char, lexer.lineCount)
 	}
-	if tok.Value != "" {
+	if tok.Lexeme != "" {
 		lexer.tokens = append(lexer.tokens, tok)
 	}
 
@@ -402,6 +383,6 @@ func (lexer *Lexer) Scan() ([]token.Token, error) {
 			return lexer.tokens, err
 		}
 	}
-	lexer.tokens = append(lexer.tokens, token.CreateToken(token.EOF,lexer.lineCount, lexer.column))
+	lexer.tokens = append(lexer.tokens, token.CreateToken(token.EOF, lexer.lineCount, lexer.column))
 	return lexer.tokens, nil
 }
