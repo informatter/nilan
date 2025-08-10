@@ -34,7 +34,7 @@ func (unary Unary) Accept(v Visitor) any {
 }
 
 type Literal struct {
-	Value string
+	Value any
 }
 
 func (literal Literal) Accept(v Visitor) any {
