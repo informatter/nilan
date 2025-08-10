@@ -100,20 +100,27 @@ type TokenType string
 type Token struct {
 	TokenType TokenType
 	Value     string
+	Line      int32
+	Column    int
 }
 
-func CreateToken(tokenType TokenType) Token {
+func CreateToken(tokenType TokenType, line int32, column int) Token {
 	value := tokenTypes[tokenType]
 	return Token{
 		TokenType: tokenType,
 		Value:     value,
+		Line:      line,
+		Column: column,
 	}
 }
 
-func CreateLiteralToken(tokenType TokenType, value string) Token {
+func CreateLiteralToken(tokenType TokenType, value string, line int32, column int) Token {
 	return Token{
 		TokenType: tokenType,
 		Value:     value,
+		Line:      line,
+		Column: column,
+
 	}
 }
 
