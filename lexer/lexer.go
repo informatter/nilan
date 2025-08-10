@@ -15,7 +15,8 @@ type Lexer struct {
 	tokens       []token.Token
 	position     int
 	readPosition int
-	lineCount    int
+	lineCount    int32
+	column	     int
 }
 
 func isLetter(char byte) bool {
@@ -53,6 +54,7 @@ func CreateLexer(input string) *Lexer {
 	return &Lexer{
 		Input:        input,
 		lineCount:    0,
+		column: 0,
 		position:     0,
 		readPosition: 0,
 	}
@@ -60,6 +62,7 @@ func CreateLexer(input string) *Lexer {
 
 func (lexer *Lexer) advance() {
 	lexer.position = lexer.readPosition
+	lexer.column = lexer.readPosition
 	lexer.readPosition++
 }
 
@@ -197,7 +200,7 @@ func (lexer *Lexer) handleNumber() error {
 	} else {
 		tokenType = token.FLOAT
 	}
-	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(tokenType, substring))
+	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(tokenType, substring, lexer.lineCount, lexer.column))
 
 	return nil
 }
@@ -254,7 +257,7 @@ func (lexer *Lexer) handleStringLiteral() error {
 		return fmt.Errorf("unclosed string literal: %s\nline: %v", lexer.Input[initPos+1:lexer.readPosition], lexer.lineCount)
 	}
 	substring := lexer.Input[initPos+1 : lexer.position]
-	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(token.STRING, substring))
+	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(token.STRING, substring, lexer.lineCount, lexer.column))
 	return nil
 }
 
@@ -282,6 +285,7 @@ func (lexer *Lexer) isWhiteSpace(char byte) bool {
 	}
 	if char == '\n' {
 		lexer.lineCount++
+		lexer.column=0
 		return true
 	}
 	return false
@@ -303,21 +307,21 @@ func (lexer *Lexer) scanToken() error {
 	var tok token.Token
 	switch char {
 	case '(':
-		tok = token.CreateToken(token.LPA)
+		tok = token.CreateToken(token.LPA,lexer.lineCount, lexer.column)
 	case ')':
-		tok = token.CreateToken(token.RPA)
+		tok = token.CreateToken(token.RPA,lexer.lineCount, lexer.column)
 	case '{':
-		tok = token.CreateToken(token.LCUR)
+		tok = token.CreateToken(token.LCUR,lexer.lineCount, lexer.column)
 	case '}':
-		tok = token.CreateToken(token.RCUR)
+		tok = token.CreateToken(token.RCUR,lexer.lineCount, lexer.column)
 	case ';':
-		tok = token.CreateToken(token.SEMICOLON)
+		tok = token.CreateToken(token.SEMICOLON,lexer.lineCount, lexer.column)
 	case ',':
-		tok = token.CreateToken(token.COMMA)
+		tok = token.CreateToken(token.COMMA,lexer.lineCount, lexer.column)
 	case '*':
-		tok = token.CreateToken(token.MULT)
+		tok = token.CreateToken(token.MULT,lexer.lineCount, lexer.column)
 	case '+':
-		tok = token.CreateToken(token.ADD)
+		tok = token.CreateToken(token.ADD,lexer.lineCount, lexer.column)
 	case '-':
 		if isNumber(lexer.peek()) {
 			err := lexer.handleNumber()
@@ -326,28 +330,28 @@ func (lexer *Lexer) scanToken() error {
 			}
 			return nil
 		}
-		tok = token.CreateToken(token.SUB)
+		tok = token.CreateToken(token.SUB,lexer.lineCount, lexer.column)
 	case '/':
-		tok = token.CreateToken(token.DIV)
+		tok = token.CreateToken(token.DIV,lexer.lineCount, lexer.column)
 	case '=':
-		tok = token.CreateToken(token.ASSIGN)
+		tok = token.CreateToken(token.ASSIGN,lexer.lineCount, lexer.column)
 		if lexer.isMatch('=') {
-			tok = token.CreateToken(token.EQUAL_EQUAL)
+			tok = token.CreateToken(token.EQUAL_EQUAL,lexer.lineCount, lexer.column)
 		}
 	case '!':
-		tok = token.CreateToken(token.BANG)
+		tok = token.CreateToken(token.BANG,lexer.lineCount, lexer.column)
 		if lexer.isMatch('=') {
-			tok = token.CreateToken(token.NOT_EQUAL)
+			tok = token.CreateToken(token.NOT_EQUAL,lexer.lineCount, lexer.column)
 		}
 	case '<':
-		tok = token.CreateToken(token.LESS)
+		tok = token.CreateToken(token.LESS,lexer.lineCount, lexer.column)
 		if lexer.isMatch('=') {
-			tok = token.CreateToken(token.LESS_EQUAL)
+			tok = token.CreateToken(token.LESS_EQUAL,lexer.lineCount, lexer.column)
 		}
 	case '>':
-		tok = token.CreateToken(token.LARGER)
+		tok = token.CreateToken(token.LARGER,lexer.lineCount, lexer.column)
 		if lexer.isMatch('=') {
-			tok = token.CreateToken(token.LARGER_EQUAL)
+			tok = token.CreateToken(token.LARGER_EQUAL,lexer.lineCount, lexer.column)
 		}
 	case '"':
 		err := lexer.handleStringLiteral()
@@ -398,6 +402,6 @@ func (lexer *Lexer) Scan() ([]token.Token, error) {
 			return lexer.tokens, err
 		}
 	}
-	lexer.tokens = append(lexer.tokens, token.CreateToken(token.EOF))
+	lexer.tokens = append(lexer.tokens, token.CreateToken(token.EOF,lexer.lineCount, lexer.column))
 	return lexer.tokens, nil
 }
