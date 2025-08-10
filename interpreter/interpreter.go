@@ -43,7 +43,7 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 		}
 		return leftValue * rightValue
 	case token.DIV:
-		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult,binary.Operator)
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult, binary.Operator)
 
 		if err != nil {
 			panic(err.Error())
@@ -53,15 +53,70 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 	case token.SUB:
 		// TODO: There seems to be a weird bug in the lexers handleNumber method
 		// 2-2 yields an error while 2 - 2 yields 0
-		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult,binary.Operator)
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult, binary.Operator)
 
 		if err != nil {
 			panic(err.Error())
 		}
 		return leftValue - rightValue
 
+	case token.ADD:
+
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult, binary.Operator)
+		if err != nil {
+			// Both operands are not numeric check if both are strings.
+			leftValString, ok := leftResult.(string)
+			rightValString, okk := rightResult.(string)
+			if ok && okk {
+				// Make sure none of them are numeric. If one of them is panic on the error
+				// raised by `isOperandsNumeric`
+				_, errA := strconv.ParseFloat(leftValString, 64)
+				_, errB := strconv.ParseFloat(rightValString, 64)
+				if errA == nil || errB == nil {
+					panic(err.Error())
+				}
+				return leftValString + rightValString
+
+			}
+		}
+		return leftValue + rightValue
+	
+	// NOTE: For now, we can use the same equality comparison as Go's
+	case token.EQUAL_EQUAL:
+		return leftResult == rightResult
+	case token.NOT_EQUAL:
+		return leftResult != rightResult
+
+	case token.LARGER:
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult, binary.Operator)
+		if err != nil {
+			panic(err)
+		}
+		return leftValue > rightValue
+	case token.LARGER_EQUAL:
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult, binary.Operator)
+		if err != nil {
+			panic(err)
+		}
+		return leftValue >= rightValue
+	case token.LESS:
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult, binary.Operator)
+		if err != nil {
+			panic(err)
+		}
+		return leftValue < rightValue
+
+	case token.LESS_EQUAL:
+		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult, binary.Operator)
+		if err != nil {
+			panic(err)
+		}
+		return leftValue <= rightValue
+
 	default:
-		return fmt.Errorf("operator '%s' not supported", operator)
+		message := fmt.Sprintf("operator '%s' not supported",operator)
+		error := CreateRuntimeError(binary.Operator.Line, binary.Operator.Column, message)
+		panic(error)
 	}
 }
 
@@ -109,6 +164,7 @@ func literalToFloat64(value interface{}) (float64, error) {
 	}
 }
 
+
 func isOperandsNumeric(operator token.TokenType, left any, right any, token token.Token) (float64, float64, error) {
 
 	l, lerr := literalToFloat64(left)
@@ -116,7 +172,7 @@ func isOperandsNumeric(operator token.TokenType, left any, right any, token toke
 	if lerr == nil && rerr == nil {
 		return l, r, nil
 	}
-	message :=fmt.Sprintf("operands must be numeric values. '%s %s %s' is not allowed", left, operator, right)
-	error :=CreateRuntimeError(token.Line,token.Column,message)
+	message := fmt.Sprintf("operands must be numeric values. '%s %s %s' is not allowed", left, operator, right)
+	error := CreateRuntimeError(token.Line, token.Column, message)
 	return 0, 0, error
 }
