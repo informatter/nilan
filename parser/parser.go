@@ -256,18 +256,17 @@ func (parser *Parser) unary() (Expression, error) {
 func (parser *Parser) primary() (Expression, error) {
 
 	if parser.isMatch([]token.TokenType{token.FALSE}) {
-		return Literal{Value: "false"}, nil
+		return Literal{Value: false}, nil
 	}
 	if parser.isMatch([]token.TokenType{token.NULL}) {
-		return Literal{Value: "null"}, nil
+		return Literal{Value: nil}, nil
 	}
 	if parser.isMatch([]token.TokenType{token.TRUE}) {
-		return Literal{Value: "true"}, nil
+		return Literal{Value: true}, nil
 	}
 
-	// should IDENTIFIER be here as well?
-	if parser.isMatch([]token.TokenType{token.FLOAT, token.INT, token.STRING, token.IDENTIFIER}) {
-		return Literal{Value: parser.previous().Value}, nil
+	if parser.isMatch([]token.TokenType{token.FLOAT, token.INT, token.STRING}) {
+		return Literal{Value: parser.previous().Literal}, nil
 	}
 
 	if parser.isMatch([]token.TokenType{token.LPA}) {
@@ -284,5 +283,5 @@ func (parser *Parser) primary() (Expression, error) {
 		}
 	}
 	currentToken := parser.peek()
-	return nil, CreateSyntaxError(currentToken.Line,currentToken.Column,fmt.Sprintf("expression is missing '%s'",token.RPA)) 
+	return nil, CreateSyntaxError(currentToken.Line, currentToken.Column, fmt.Sprintf("expression is missing '%s'", token.RPA))
 }
