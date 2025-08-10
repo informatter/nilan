@@ -67,6 +67,9 @@ func Create(tokens []token.Token) *Parser {
 
 // Prints the AST created by this Parser
 func (parser *Parser) Print(expression Expression) {
+	if expression == nil {
+		return
+	}
 	result := expression.Accept(astPrinter{})
 	fmt.Println(result)
 }
@@ -280,6 +283,6 @@ func (parser *Parser) primary() (Expression, error) {
 			return Grouping{Expression: expr}, nil
 		}
 	}
-
-	return nil, fmt.Errorf("unclosed expression encountered")
+	currentToken := parser.peek()
+	return nil, CreateSyntaxError(currentToken.Line,currentToken.Column,fmt.Sprintf("expression is missing '%s'",token.RPA)) 
 }
