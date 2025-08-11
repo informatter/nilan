@@ -51,8 +51,6 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 		return leftValue / rightValue
 
 	case token.SUB:
-		// TODO: There seems to be a weird bug in the lexers handleNumber method
-		// 2-2 yields an error while 2 - 2 yields 0
 		leftValue, rightValue, err := isOperandsNumeric(operator, leftResult, rightResult, binary.Operator)
 
 		if err != nil {
@@ -121,7 +119,31 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 }
 
 func (i Interpreter) VisitUnary(unary parser.Unary) any {
-	return nil
+	rightResult := i.evaluate(unary.Right)
+	operator := unary.Operator.TokenType
+	switch operator {
+	case token.SUB:
+		r, err := literalToFloat64(rightResult)
+		if err !=nil{
+			message := fmt.Sprintf("operand must be a numeric value. '%s %s' is not allowed", operator,rightResult)
+			error := CreateRuntimeError(unary.Operator.Line, unary.Operator.Column, message)
+			panic(error)
+		}
+		return -r
+	case token.BANG:
+		if rightResult == nil{
+			return !false
+		}
+		value,isBool :=rightResult.(bool)
+		if isBool{
+			return !value
+		}
+		return !true
+	default:
+		message := fmt.Sprintf("operator '%s' not supported for unary operations",operator)
+		error := CreateRuntimeError(unary.Operator.Line, unary.Operator.Column, message)
+		panic(error)
+	}
 }
 
 func (i Interpreter) VisitLiteral(literal parser.Literal) any {
@@ -138,7 +160,7 @@ func (i Interpreter) evaluate(expression parser.Expression) any {
 
 // Converts the value of a Literal expression to a float64.
 // Currently the value of a Literal expression is a string.
-func literalToFloat64(value interface{}) (float64, error) {
+func literalToFloat64(value any) (float64, error) {
 
 	switch v := value.(type) {
 	case float64:
