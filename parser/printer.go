@@ -10,10 +10,10 @@ type astPrinter struct{}
 
 func (p astPrinter) VisitBinary(b Binary) any {
 
-	return parenthesize(b.Operator.Value, b.Left, b.Right)
+	return parenthesize(b.Operator.Lexeme, b.Left, b.Right)
 }
 func (p astPrinter) VisitUnary(u Unary) any {
-	return parenthesize(u.Operator.Value, u.Right)
+	return parenthesize(u.Operator.Lexeme, u.Right)
 }
 func (p astPrinter) VisitLiteral(l Literal) any {
 	return fmt.Sprintf("%v", l.Value)

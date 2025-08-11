@@ -181,9 +181,11 @@ func (lexer *Lexer) handleNumber() error {
 	substring := lexer.Input[initPos:lexer.readPosition]
 	var tok token.Token
 	if decimalCount == 0 {
+		// TODO: Handle if we need to parse to different types of ints.
 		result, _ := strconv.ParseInt(substring, 0, 64)
 		tok = token.CreateLiteralToken(token.INT, result, substring, lexer.lineCount, lexer.column)
 	} else {
+		// TODO: Handle if we need to parse to different types of floats.
 		result, _ := strconv.ParseFloat(substring, 64)
 		tok = token.CreateLiteralToken(token.FLOAT, result, substring, lexer.lineCount, lexer.column)
 	}

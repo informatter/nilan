@@ -18,7 +18,7 @@ func main() {
 func repl(in io.Reader, out io.Writer) {
 
 	scanner := bufio.NewScanner(in)
-	
+
 	for {
 		fmt.Fprintf(out, ">>> ")
 		scanned := scanner.Scan()
@@ -37,7 +37,7 @@ func repl(in io.Reader, out io.Writer) {
 		}
 		parser := parser.Create(tokens)
 		ast, err := parser.Parse()
-		if err !=nil{
+		if err != nil {
 			fmt.Println(err.Error())
 			continue
 		}

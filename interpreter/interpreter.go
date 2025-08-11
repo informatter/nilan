@@ -78,7 +78,7 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 			}
 		}
 		return leftValue + rightValue
-	
+
 	// NOTE: For now, we can use the same equality comparison as Go's
 	case token.EQUAL_EQUAL:
 		return leftResult == rightResult
@@ -112,7 +112,7 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 		return leftValue <= rightValue
 
 	default:
-		message := fmt.Sprintf("operator '%s' not supported",operator)
+		message := fmt.Sprintf("operator '%s' not supported", operator)
 		error := CreateRuntimeError(binary.Operator.Line, binary.Operator.Column, message)
 		panic(error)
 	}
@@ -124,23 +124,23 @@ func (i Interpreter) VisitUnary(unary parser.Unary) any {
 	switch operator {
 	case token.SUB:
 		r, err := literalToFloat64(rightResult)
-		if err !=nil{
-			message := fmt.Sprintf("operand must be a numeric value. '%s %s' is not allowed", operator,rightResult)
+		if err != nil {
+			message := fmt.Sprintf("operand must be a numeric value. '%s %s' is not allowed", operator, rightResult)
 			error := CreateRuntimeError(unary.Operator.Line, unary.Operator.Column, message)
 			panic(error)
 		}
 		return -r
 	case token.BANG:
-		if rightResult == nil{
+		if rightResult == nil {
 			return !false
 		}
-		value,isBool :=rightResult.(bool)
-		if isBool{
+		value, isBool := rightResult.(bool)
+		if isBool {
 			return !value
 		}
 		return !true
 	default:
-		message := fmt.Sprintf("operator '%s' not supported for unary operations",operator)
+		message := fmt.Sprintf("operator '%s' not supported for unary operations", operator)
 		error := CreateRuntimeError(unary.Operator.Line, unary.Operator.Column, message)
 		panic(error)
 	}
@@ -185,7 +185,6 @@ func literalToFloat64(value any) (float64, error) {
 		return 0, fmt.Errorf("unsupported type: %T", value)
 	}
 }
-
 
 func isOperandsNumeric(operator token.TokenType, left any, right any, token token.Token) (float64, float64, error) {
 
