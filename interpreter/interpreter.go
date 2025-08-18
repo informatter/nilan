@@ -48,6 +48,9 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 		if err != nil {
 			panic(err.Error())
 		}
+		if rightValue == 0 {
+			return CreateRuntimeError(binary.Operator.Line, binary.Operator.Column+1, "Division by zero")
+		}
 		return leftValue / rightValue
 
 	case token.SUB:
@@ -79,7 +82,7 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 		}
 		return leftValue + rightValue
 
-	// NOTE: For now, we can use the same equality comparison as Go's
+	// NOTE: For now, we can use the same equality comparison as Go's for Nilan
 	case token.EQUAL_EQUAL:
 		return leftResult == rightResult
 	case token.NOT_EQUAL:
@@ -159,7 +162,6 @@ func (i Interpreter) evaluate(expression parser.Expression) any {
 }
 
 // Converts the value of a Literal expression to a float64.
-// Currently the value of a Literal expression is a string.
 func literalToFloat64(value any) (float64, error) {
 
 	switch v := value.(type) {
