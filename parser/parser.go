@@ -37,6 +37,13 @@ var factorExpressionTypes = []token.TokenType{
 var unaryExpressionTypes = []token.TokenType{
 	token.BANG,
 	token.SUB,
+
+	// NOTE: not supported operands on unary expressions are included
+	// So they can be parsed, but then the interpreter can throw a more detailed
+	// runtime error message. This is known as "error productions"
+	token.MULT,
+	token.ADD,
+	token.DIV,
 }
 
 type Parser struct {
@@ -148,6 +155,37 @@ func (parser *Parser) Parse() (Expression, error) {
 	ast, err := parser.expression()
 	return ast, err
 }
+
+// func (parser *Parser) Parse()[]Stmt{
+// 	statements := []Stmt{}
+
+// 	for {
+// 		if parser.isFinished(){
+// 			break
+// 		}
+// 		statements = append(statements, parser.statement())
+// 	}
+// 	return statements
+// }
+
+// func (parser *Parser) statement() Stmt{
+// 	if parser.isMatch([]token.TokenType{token.PRINT}){
+// 		return parser.printStatement()
+// 	}
+// 	return parser.expressionStatement()
+// }
+
+// func (parser *Parser) printStatement()  Stmt{
+// 	value, error := parser.expression()
+
+// 	return PrintStmt{Expression: value}
+// }
+
+// func (parser *Parser) expressionStatement()  Stmt{
+// 	value, error := parser.expression()
+
+// 	return ExpressionStmt{Expression: value}
+// }
 
 func (parser *Parser) expression() (Expression, error) {
 	return parser.equality()
@@ -274,14 +312,29 @@ func (parser *Parser) primary() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		// Advances the parsers position by 1 unit after the expression
-		// inside the parenthesis is parsed. This guarantees that any other tokens
-		// after the expression are parsed
-		if parser.isMatch([]token.TokenType{token.RPA}) {
-
-			return Grouping{Expression: expr}, nil
+		consumeErr := parser.consume(token.RPA, fmt.Sprintf("expression is missing '%s'", token.RPA))
+		if consumeErr != nil {
+			return nil, consumeErr
 		}
+		return Grouping{Expression: expr}, nil
+	}
+
+	currentToken := parser.peek()
+	return nil, CreateSyntaxError(currentToken.Line, currentToken.Column, "Unrecognised expression.")
+}
+
+// Consumes the current token by advancing the parsers current position by
+// one unit if the `tokenType` matches the token type of the parsers current
+// position.
+//
+//	Returns:
+//	- A SyntaxError if the provided `tokenType` does not match the `TokenType`
+//		at the parsers current position
+func (parser *Parser) consume(tokenType token.TokenType, errorMessage string) error {
+	if parser.checkType(tokenType) {
+		parser.advance()
+		return nil
 	}
 	currentToken := parser.peek()
-	return nil, CreateSyntaxError(currentToken.Line, currentToken.Column, fmt.Sprintf("expression is missing '%s'", token.RPA))
+	return CreateSyntaxError(currentToken.Line, currentToken.Column, errorMessage)
 }
