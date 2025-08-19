@@ -36,16 +36,13 @@ func repl(in io.Reader, out io.Writer) {
 			continue
 		}
 		parser := parser.Create(tokens)
-		ast, err := parser.Parse()
-		if err != nil {
-			fmt.Println(err.Error())
+		ast, errors := parser.Parse()
+		if len(errors) > 0 {
 			continue
 		}
 		parser.Print(ast)
 		interpreter := interpreter.Interpreter{}
-		result := interpreter.Interpret(ast)
-		if result != nil {
-			fmt.Println(result)
-		}
+		interpreter.Interpret(ast)
+
 	}
 }
