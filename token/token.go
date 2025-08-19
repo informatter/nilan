@@ -53,6 +53,7 @@ const (
 	TRUE   = "TRUE"
 	FALSE  = "FALSE"
 	NULL   = "NULL"
+	PRINT  = "PRINT"
 )
 
 // KeyWords maps reserved keyword strings in Nilan to their
@@ -86,6 +87,7 @@ var KeyWords = map[string]TokenType{
 	"false":  FALSE,
 	"true":   TRUE,
 	"null":   NULL,
+	"print":  PRINT,
 }
 
 // tokenTypes maps single and multi-character symbols in Nilan
