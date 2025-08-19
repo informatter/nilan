@@ -1,16 +1,16 @@
+// Recursive descent parser
+// https://en.wikipedia.org/wiki/Recursive_descent_parser
+
+//	A Recursive descent parser is a top-down parser because it starts from the top
+//
+// grammar rule and works its way down in to the nested sub-experessions before reaching
+// the leaves of the syntax tree (terminal rules)
 package parser
 
 import (
 	"fmt"
 	"nilan/token"
 )
-
-// Recursive descent parser
-// https://en.wikipedia.org/wiki/Recursive_descent_parser
-
-//  A Recursive descent parser is a top-down parser because it starts from the top
-// grammar rule and works its way down in to the nested sub-experessions before reaching
-// the leaves of the syntax tree (terminal rules)
 
 var comparisonTokenTypes = []token.TokenType{
 	token.LARGER,
@@ -72,13 +72,17 @@ func Create(tokens []token.Token) *Parser {
 	}
 }
 
-// Prints the AST created by this Parser
-func (parser *Parser) Print(expression Expression) {
-	if expression == nil {
-		return
+// Print prints the string representations of a slice of Stmt nodes
+// using the AST printer. Each statement is visited with an astPrinter,
+// and the resulting string is output using fmt.Println.
+//
+// This method does not return any value; its purpose is to output
+// formatted representations of the AST nodes to standard output.
+func (parser *Parser) Print(statements []Stmt) {
+	for _, s := range statements {
+		result := s.Accept(astPrinter{})
+		fmt.Println(result)
 	}
-	result := expression.Accept(astPrinter{})
-	fmt.Println(result)
 }
 
 // Peeks the token at the parser's current position,
@@ -151,54 +155,105 @@ func (parser *Parser) isMatch(tokenTypes []token.TokenType) bool {
 	return false
 }
 
-func (parser *Parser) Parse() (Expression, error) {
-	ast, err := parser.expression()
-	return ast, err
+// Parse parses the entire token stream into a slice of Stmt (statement) nodes,
+// continuing until the end of input. Errors during parsing are collected
+// but parsing continues to find additional errors where possible.
+//
+// Returns:
+//   - []Stmt: the successfully parsed statements.
+//   - []error: all errors that occurred during parsing.
+func (parser *Parser) Parse() ([]Stmt, []error) {
+	statements := []Stmt{}
+	errors := []error{}
+
+	for {
+		if parser.isFinished() {
+			break
+		}
+		statement, err := parser.statement()
+		if err != nil {
+			errors = append(errors, err)
+			continue
+		}
+		statements = append(statements, statement)
+	}
+
+	for _, err := range errors {
+		fmt.Println(err.Error())
+	}
+	return statements, errors
 }
 
-// func (parser *Parser) Parse()[]Stmt{
-// 	statements := []Stmt{}
+// statement parses a single statement. Currently, this can be either
+// a print statement ("print <expr>") or an expression statement.
+//
+// Returns:
+//   - Stmt: the parsed statement node.
+//   - error: if parsing fails, otherwise nil.
+func (parser *Parser) statement() (Stmt, error) {
 
-// 	for {
-// 		if parser.isFinished(){
-// 			break
-// 		}
-// 		statements = append(statements, parser.statement())
-// 	}
-// 	return statements
-// }
+	if parser.isMatch([]token.TokenType{token.PRINT}) {
+		printStatement, err := parser.printStatement()
+		if err != nil {
+			return nil, err
+		}
+		return printStatement, nil
+	}
+	// TODO: Add more expression types.
+	exprStatement, err := parser.expressionStatement()
+	if err != nil {
+		return nil, err
+	}
+	return exprStatement, nil
+}
 
-// func (parser *Parser) statement() Stmt{
-// 	if parser.isMatch([]token.TokenType{token.PRINT}){
-// 		return parser.printStatement()
-// 	}
-// 	return parser.expressionStatement()
-// }
+// printStatement parses a print statement of the form "print <expression>".
+//
+// Returns:
+//   - Stmt: a PrintStmt containing the expression to print.
+//   - error: if the inner expression fails to parse.
+func (parser *Parser) printStatement() (Stmt, error) {
+	expression, err := parser.expression()
+	if err != nil {
+		return nil, err
+	}
+	return PrintStmt{Expression: expression}, nil
+}
 
-// func (parser *Parser) printStatement()  Stmt{
-// 	value, error := parser.expression()
+// expressionStatement parses a statement consisting of a single expression.
+//
+// Returns:
+//   - Stmt: an ExpressionStmt wrapping the parsed expression.
+//   - error: if the expression cannot be parsed.
+func (parser *Parser) expressionStatement() (Stmt, error) {
+	expression, err := parser.expression()
+	if err != nil {
+		return nil, err
+	}
+	return ExpressionStmt{Expression: expression}, nil
+}
 
-// 	return PrintStmt{Expression: value}
-// }
-
-// func (parser *Parser) expressionStatement()  Stmt{
-// 	value, error := parser.expression()
-
-// 	return ExpressionStmt{Expression: value}
-// }
-
+// expression is the entry point for parsing expressions. It begins at
+// the equality rule, which encompasses all lower-precedence rules.
+//
+// Returns:
+//   - Expression: the parsed expression AST node.
+//   - error: if parsing fails.
 func (parser *Parser) expression() (Expression, error) {
 	return parser.equality()
 }
 
+// equality parses equality expressions using operators "==" and "!=".
+//
+// Returns:
+//   - Expression: a Binary node (or sub-expression) representing equality comparison.
+//   - error: if parsing fails.
 func (parser *Parser) equality() (Expression, error) {
-
 	exp, err := parser.comparison()
 	if err != nil {
 		return nil, err
 	}
 	for parser.isMatch(equalityTokenTypes) {
-
 		operator := parser.previous()
 		right, err := parser.comparison()
 		if err != nil {
@@ -209,19 +264,21 @@ func (parser *Parser) equality() (Expression, error) {
 			Operator: operator,
 			Right:    right,
 		}
-
 	}
 	return exp, nil
 }
 
+// comparison parses comparison expressions using operators "<", "<=", ">", ">=".
+//
+// Returns:
+//   - Expression: a Binary node (or sub-expression) representing a comparison.
+//   - error: if parsing fails.
 func (parser *Parser) comparison() (Expression, error) {
-
 	exp, err := parser.term()
 	if err != nil {
 		return nil, err
 	}
 	for parser.isMatch(comparisonTokenTypes) {
-
 		operator := parser.previous()
 		right, err := parser.term()
 		if err != nil {
@@ -236,6 +293,11 @@ func (parser *Parser) comparison() (Expression, error) {
 	return exp, nil
 }
 
+// term parses addition and subtraction expressions using operators "+" and "-".
+//
+// Returns:
+//   - Expression: a Binary node (or sub-expression) representing addition or subtraction.
+//   - error: if parsing fails.
 func (parser *Parser) term() (Expression, error) {
 	exp, err := parser.factor()
 	if err != nil {
@@ -256,6 +318,11 @@ func (parser *Parser) term() (Expression, error) {
 	return exp, nil
 }
 
+// factor parses multiplication and division expressions using operators "*" and "/".
+//
+// Returns:
+//   - Expression: a Binary node (or sub-expression) representing multiplication or division.
+//   - error: if parsing fails.
 func (parser *Parser) factor() (Expression, error) {
 	exp, err := parser.unary()
 	if err != nil {
@@ -276,6 +343,12 @@ func (parser *Parser) factor() (Expression, error) {
 	return exp, nil
 }
 
+// unary parses unary prefix expressions using operators "!" or "-".
+// Examples: "!true", "-x".
+//
+// Returns:
+//   - Expression: a Unary node if a unary operator was found, otherwise defers to primary().
+//   - error: if parsing fails.
 func (parser *Parser) unary() (Expression, error) {
 	if parser.isMatch(unaryExpressionTypes) {
 		operator := parser.previous()
@@ -291,8 +364,16 @@ func (parser *Parser) unary() (Expression, error) {
 	return parser.primary()
 }
 
+// primary parses the most basic forms of expressions:
+//   - Literals: true, false, null, strings, numbers
+//   - Grouping: (expression)
+//
+// If no valid token matches, returns a syntax error.
+//
+// Returns:
+//   - Expression: a Literal, Grouping expression .
+//   - error: if no valid primary expression can be parsed.
 func (parser *Parser) primary() (Expression, error) {
-
 	if parser.isMatch([]token.TokenType{token.FALSE}) {
 		return Literal{Value: false}, nil
 	}
