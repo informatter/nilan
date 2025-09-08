@@ -40,10 +40,11 @@ func (p PrintStmt) Accept(v StmtVisitor) any {
 // VarStmt represents a variable declaration statement, its composed
 // of the name of the variable and the expression it binds to. A declaration
 // statement declares functions, variables and classes.
-type VarStmt struct{
-	Name token.Token
+type VarStmt struct {
+	Name        token.Token
 	Initializer Expression
 }
-func(varStmt VarStmt) Accept(v StmtVisitor) any{
+
+func (varStmt VarStmt) Accept(v StmtVisitor) any {
 	return v.VisitVarStmt(varStmt)
 }
