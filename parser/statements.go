@@ -1,5 +1,7 @@
 package parser
 
+import "nilan/token"
+
 // Stmt is the base interface for all statement nodes in the AST.
 // Like Expression, it follows the Visitor design pattern where each
 // statement type implements Accept, calling back into the correct
@@ -33,4 +35,15 @@ type PrintStmt struct {
 
 func (p PrintStmt) Accept(v StmtVisitor) any {
 	return v.VisitPrintStmt(p)
+}
+
+// VarStmt represents a variable declaration statement, its composed
+// of the name of the variable and the expression it binds to. A declaration
+// statement declares functions, variables and classes.
+type VarStmt struct{
+	Name token.Token
+	Initializer Expression
+}
+func(varStmt VarStmt) Accept(v StmtVisitor) any{
+	return v.VisitVarStmt(varStmt)
 }
