@@ -170,7 +170,7 @@ func (parser *Parser) Parse() ([]Stmt, []error) {
 		if parser.isFinished() {
 			break
 		}
-		statement, err := parser.statement()
+		statement, err := parser.declaration()
 		if err != nil {
 			errors = append(errors, err)
 			continue
@@ -182,6 +182,64 @@ func (parser *Parser) Parse() ([]Stmt, []error) {
 		fmt.Println(err.Error())
 	}
 	return statements, errors
+}
+
+// declaration parses a declaration statement.
+// 
+// It first checks if the next token is a variable declaration keyword (e.g., `var`).
+// If so, it calls the variableDeclaration method to parse the variable declaration statement.
+// 
+// TODO: Support for function and class declarations will be added later.
+//
+// If the next token is not a variable declaration, it parses a general statement.
+//
+// Returns the parsed statement (Stmt) or an error if parsing fails.
+//
+func (parser *Parser) declaration() (Stmt, error) {
+	if parser.isMatch([]token.TokenType{token.VAR}) {
+		return parser.variableDeclaration()
+	}
+	// TODO Add support for functions and classes
+	return parser.statement()
+}
+
+// variableDeclaration parses and creates a variable declaration statement.
+//
+// It expects the next token to be an identifier representing the variable's name.
+// If the token is not an identifier, it returns an error indicating the expected variable name.
+//
+// After successfully consuming the identifier, it optionally parses an initializer expression
+// if an assignment operator (=) is found. If an initializer is present, it is parsed as an expression.
+//
+// It returns a VarStmt representing the variable declaration with the variable name and optional initialiser
+// expression, or an error if parsing fails at any point.
+// 
+// Returns:
+//  - VarStmt: The variable declaration statement AST node.
+//
+// Example input:
+//   
+//   >>> var x = 10
+// 
+func (parser *Parser) variableDeclaration() (Stmt, error) {
+	tok, consumeError := parser.consume(token.IDENTIFIER, "Expected variable name")
+	if consumeError != nil {
+		return nil, consumeError
+	}
+
+	var initialiser Expression
+	if parser.isMatch([]token.TokenType{token.ASSIGN}) {
+		var err error
+		initialiser, err = parser.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return VarStmt{
+		Name:        tok,
+		Initializer: initialiser,
+	}, nil
 }
 
 // statement parses a single statement. Currently, this can be either
@@ -388,12 +446,16 @@ func (parser *Parser) primary() (Expression, error) {
 		return Literal{Value: parser.previous().Literal}, nil
 	}
 
+	if parser.isMatch([]token.TokenType{token.IDENTIFIER}) {
+		return Variable{Name: parser.previous()}, nil
+	}
+
 	if parser.isMatch([]token.TokenType{token.LPA}) {
 		expr, err := parser.expression()
 		if err != nil {
 			return nil, err
 		}
-		consumeErr := parser.consume(token.RPA, fmt.Sprintf("expression is missing '%s'", token.RPA))
+		_, consumeErr := parser.consume(token.RPA, fmt.Sprintf("expression is missing '%s'", token.RPA))
 		if consumeErr != nil {
 			return nil, consumeErr
 		}
@@ -411,11 +473,10 @@ func (parser *Parser) primary() (Expression, error) {
 //	Returns:
 //	- A SyntaxError if the provided `tokenType` does not match the `TokenType`
 //		at the parsers current position
-func (parser *Parser) consume(tokenType token.TokenType, errorMessage string) error {
+func (parser *Parser) consume(tokenType token.TokenType, errorMessage string) (token.Token, error) {
 	if parser.checkType(tokenType) {
-		parser.advance()
-		return nil
+		return parser.advance(), nil
 	}
 	currentToken := parser.peek()
-	return CreateSyntaxError(currentToken.Line, currentToken.Column, errorMessage)
+	return token.CreateToken(token.EOF, 0, 0), CreateSyntaxError(currentToken.Line, currentToken.Column, errorMessage)
 }
