@@ -9,34 +9,42 @@ import (
 type astPrinter struct{}
 
 func (p astPrinter) VisitExpressionStmt(exprStmt ExpressionStmt) any {
-	return parenthesize("dd", exprStmt.Expression)
+	return p.parenthesize("expression", exprStmt.Expression)
 }
 
 func (p astPrinter) VisitPrintStmt(printStmt PrintStmt) any {
 
-	return parenthesize("print", printStmt.Expression)
+	return p.parenthesize("print", printStmt.Expression)
+}
+
+func (p astPrinter) VisitVarStmt(varStmt VarStmt) any {
+	return p.parenthesize(varStmt.Name.Lexeme, varStmt.Initializer)
+}
+
+func (p astPrinter) VisitVariableExpression(variale Variable) any {
+	return fmt.Sprintf("%s", variale.Name.Literal)
 }
 
 func (p astPrinter) VisitBinary(b Binary) any {
 
-	return parenthesize(b.Operator.Lexeme, b.Left, b.Right)
+	return p.parenthesize(b.Operator.Lexeme, b.Left, b.Right)
 }
 func (p astPrinter) VisitUnary(u Unary) any {
-	return parenthesize(u.Operator.Lexeme, u.Right)
+	return p.parenthesize(u.Operator.Lexeme, u.Right)
 }
 func (p astPrinter) VisitLiteral(l Literal) any {
 	return fmt.Sprintf("%v", l.Value)
 }
 func (p astPrinter) VisitGrouping(g Grouping) any {
-	return parenthesize("group", g.Expression)
+	return p.parenthesize("group", g.Expression)
 }
 
 // parenthesize creates an S-expression in order to visualise
 // the expression presedence order within the AST.
-func parenthesize(name string, expressions ...Expression) string {
+func (p astPrinter) parenthesize(name string, expressions ...Expression) string {
 	astString := "(" + name
 	for _, expression := range expressions {
-		astString += " " + expression.Accept(astPrinter{}).(string)
+		astString += " " + expression.Accept(p).(string)
 	}
 	astString += ")"
 	return astString

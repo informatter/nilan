@@ -62,10 +62,11 @@ func (grouping Grouping) Accept(v Visitor) any {
 }
 
 // Variable represents a value binded to a declared
-// variable 
+// variable
 type Variable struct {
 	Name token.Token // An IDENTIFIER token
 }
-func (variable Variable) Accept( v Visitor)any{
+
+func (variable Variable) Accept(v Visitor) any {
 	return v.VisitVariableExpression(variable)
 }

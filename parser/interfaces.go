@@ -18,6 +18,8 @@ type Visitor interface {
 	// VisitGrouping is called when visiting a Grouping expression (expressions wrapped in parentheses).
 	VisitGrouping(grouping Grouping) any
 
+	VisitVariableExpression(variable Variable) any
+
 	// TODO: Add further Visit methods as new expression grammar rules are introduced.
 }
 
@@ -32,5 +34,10 @@ type StmtVisitor interface {
 	// VisitPrintStmt is called when visiting a Print statement.
 	// Example: "print foo + bar;"
 	VisitPrintStmt(printStmt PrintStmt) any
+
+	// visitVarStmt is called when visiting a declaration statement.
+	// Example: "name = 'foo'"
+	VisitVarStmt(varStmt VarStmt) any
+
 	// TODO: Add further visit methods as new statement grammar rules are introduced.
 }

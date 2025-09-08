@@ -7,12 +7,21 @@ import (
 	"strconv"
 )
 
-// Interpreter executes parsed statements and evaluates expressions.
-type Interpreter struct{}
+// TreeWalkInterpreter executes parsed statements and evaluates expressions.
+type TreeWalkInterpreter struct {
+	environment *Environment
+}
+
+// Creates an instance of a "Tree-Walk Interpreter"
+func Make() *TreeWalkInterpreter {
+	return &TreeWalkInterpreter{
+		environment: MakeEnvironment(),
+	}
+}
 
 // Interpret executes a list of statements.
 // It recovers from panics to print runtime errors without crashing.
-func (i Interpreter) Interpret(statements []parser.Stmt) {
+func (i *TreeWalkInterpreter) Interpret(statements []parser.Stmt) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println(r)
@@ -23,9 +32,9 @@ func (i Interpreter) Interpret(statements []parser.Stmt) {
 
 // executeStatements executes each statement by invoking its Accept method
 // with a fresh Interpreter visitor. It does not return anything.
-func (i Interpreter) executeStatements(statements []parser.Stmt) {
+func (i *TreeWalkInterpreter) executeStatements(statements []parser.Stmt) {
 	for _, s := range statements {
-		s.Accept(Interpreter{})
+		s.Accept(i)
 	}
 }
 
@@ -34,7 +43,7 @@ func (i Interpreter) executeStatements(statements []parser.Stmt) {
 //
 // Returns:
 //   - any: always nil because statements do not produce values.
-func (i Interpreter) VisitExpressionStmt(exprStatement parser.ExpressionStmt) any {
+func (i *TreeWalkInterpreter) VisitExpressionStmt(exprStatement parser.ExpressionStmt) any {
 	i.evaluate(exprStatement.Expression)
 	return nil
 }
@@ -44,9 +53,24 @@ func (i Interpreter) VisitExpressionStmt(exprStatement parser.ExpressionStmt) an
 //
 // Returns:
 //   - any: always nil because print statements have no return value.
-func (i Interpreter) VisitPrintStmt(printStmt parser.PrintStmt) any {
+func (i *TreeWalkInterpreter) VisitPrintStmt(printStmt parser.PrintStmt) any {
 	value := i.evaluate(printStmt.Expression)
 	fmt.Println(value)
+	return nil
+}
+
+// VisitVarStmt visits a VarStmt node.
+// It evaluates the initialiser expression of the statement if it contains one
+// and it sets the name of the variable to its evaluated value.
+// Returns:
+//  - nil: This method returns nil, as it mutates its own state to store
+//    a variable name to its value
+func (i *TreeWalkInterpreter) VisitVarStmt(varStmt parser.VarStmt) any {
+	var value any = nil
+	if varStmt.Initializer != nil {
+		value = i.evaluate(varStmt.Initializer)
+	}
+	i.environment.set(varStmt.Name.Lexeme, value)
 	return nil
 }
 
@@ -59,7 +83,7 @@ func (i Interpreter) VisitPrintStmt(printStmt parser.PrintStmt) any {
 //   - any: evaluated result of the binary expression (number, string, bool).
 //
 // Panics on invalid operands or unsupported operators.
-func (i Interpreter) VisitBinary(binary parser.Binary) any {
+func (i *TreeWalkInterpreter) VisitBinary(binary parser.Binary) any {
 	leftResult := i.evaluate(binary.Left)
 	rightResult := i.evaluate(binary.Right)
 	operator := binary.Operator.TokenType
@@ -160,7 +184,7 @@ func (i Interpreter) VisitBinary(binary parser.Binary) any {
 //   - any: the evaluated result of the unary operation.
 //
 // Panics on invalid operand types or unsupported operators.
-func (i Interpreter) VisitUnary(unary parser.Unary) any {
+func (i *TreeWalkInterpreter) VisitUnary(unary parser.Unary) any {
 	rightResult := i.evaluate(unary.Right)
 	operator := unary.Operator.TokenType
 	switch operator {
@@ -188,6 +212,20 @@ func (i Interpreter) VisitUnary(unary parser.Unary) any {
 	}
 }
 
+// Retrieves the value for variable.
+// Returns:
+//  - The value of the variable
+// Raises:
+//  - RuntimeError: panics with a RuntimeError if attempting to access an undefined
+//    variable
+func (i *TreeWalkInterpreter) VisitVariableExpression(expression parser.Variable) any {
+	value, error := i.environment.get(expression.Name)
+	if error != nil {
+		panic(error)
+	}
+	return value
+}
+
 // VisitLiteral returns the value of a Literal node.
 //
 // Parameters:
@@ -195,7 +233,7 @@ func (i Interpreter) VisitUnary(unary parser.Unary) any {
 //
 // Returns:
 //   - any: the literal's underlying value.
-func (i Interpreter) VisitLiteral(literal parser.Literal) any {
+func (i *TreeWalkInterpreter) VisitLiteral(literal parser.Literal) any {
 	return literal.Value
 }
 
@@ -206,7 +244,7 @@ func (i Interpreter) VisitLiteral(literal parser.Literal) any {
 //
 // Returns:
 //   - any: the value of the enclosed expression.
-func (i Interpreter) VisitGrouping(grouping parser.Grouping) any {
+func (i *TreeWalkInterpreter) VisitGrouping(grouping parser.Grouping) any {
 	return i.evaluate(grouping.Expression)
 }
 
@@ -215,8 +253,9 @@ func (i Interpreter) VisitGrouping(grouping parser.Grouping) any {
 //
 // Returns:
 //   - any: the evaluated value of the expression.
-func (i Interpreter) evaluate(expression parser.Expression) any {
-	return expression.Accept(Interpreter{})
+func (i *TreeWalkInterpreter) evaluate(expression parser.Expression) any {
+	// return expression.Accept(TreeWalkInterpreter{})
+	return expression.Accept(i)
 }
 
 // literalToFloat64 attempts to convert a literal value into a float64.
