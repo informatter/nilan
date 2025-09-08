@@ -60,3 +60,12 @@ type Grouping struct {
 func (grouping Grouping) Accept(v Visitor) any {
 	return v.VisitGrouping(grouping)
 }
+
+// Variable represents a value binded to a declared
+// variable 
+type Variable struct {
+	Name token.Token // An IDENTIFIER token
+}
+func (variable Variable) Accept( v Visitor)any{
+	return v.VisitVariableExpression(variable)
+}
