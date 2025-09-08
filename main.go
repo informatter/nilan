@@ -18,6 +18,7 @@ func main() {
 func repl(in io.Reader, out io.Writer) {
 
 	scanner := bufio.NewScanner(in)
+	interpreter := interpreter.Make()
 
 	for {
 		fmt.Fprintf(out, ">>> ")
@@ -41,7 +42,6 @@ func repl(in io.Reader, out io.Writer) {
 			continue
 		}
 		parser.Print(ast)
-		interpreter := interpreter.Interpreter{}
 		interpreter.Interpret(ast)
 
 	}
