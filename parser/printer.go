@@ -21,8 +21,12 @@ func (p astPrinter) VisitVarStmt(varStmt VarStmt) any {
 	return p.parenthesize(varStmt.Name.Lexeme, varStmt.Initializer)
 }
 
+func (p astPrinter) VisitAssignExpression(assign Assign) any {
+	return p.parenthesize(assign.Name.Lexeme, assign.Value)
+}
+
 func (p astPrinter) VisitVariableExpression(variale Variable) any {
-	return fmt.Sprintf("%s", variale.Name.Literal)
+	return fmt.Sprintln(variale.Name.Lexeme)
 }
 
 func (p astPrinter) VisitBinary(b Binary) any {
@@ -44,7 +48,11 @@ func (p astPrinter) VisitGrouping(g Grouping) any {
 func (p astPrinter) parenthesize(name string, expressions ...Expression) string {
 	astString := "(" + name
 	for _, expression := range expressions {
-		astString += " " + expression.Accept(p).(string)
+		if expression == nil {
+			astString += " " + "null"
+		} else {
+			astString += " " + expression.Accept(p).(string)
+		}
 	}
 	astString += ")"
 	return astString
