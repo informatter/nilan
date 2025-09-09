@@ -173,6 +173,7 @@ func (parser *Parser) Parse() ([]Stmt, []error) {
 		statement, err := parser.declaration()
 		if err != nil {
 			errors = append(errors, err)
+			parser.position++
 			continue
 		}
 		statements = append(statements, statement)
@@ -185,16 +186,15 @@ func (parser *Parser) Parse() ([]Stmt, []error) {
 }
 
 // declaration parses a declaration statement.
-// 
+//
 // It first checks if the next token is a variable declaration keyword (e.g., `var`).
 // If so, it calls the variableDeclaration method to parse the variable declaration statement.
-// 
+//
 // TODO: Support for function and class declarations will be added later.
 //
 // If the next token is not a variable declaration, it parses a general statement.
 //
 // Returns the parsed statement (Stmt) or an error if parsing fails.
-//
 func (parser *Parser) declaration() (Stmt, error) {
 	if parser.isMatch([]token.TokenType{token.VAR}) {
 		return parser.variableDeclaration()
@@ -213,14 +213,13 @@ func (parser *Parser) declaration() (Stmt, error) {
 //
 // It returns a VarStmt representing the variable declaration with the variable name and optional initialiser
 // expression, or an error if parsing fails at any point.
-// 
+//
 // Returns:
-//  - VarStmt: The variable declaration statement AST node.
+//   - VarStmt: The variable declaration statement AST node.
 //
 // Example input:
-//   
-//   >>> var x = 10
-// 
+//
+//	>>> var x = 10
 func (parser *Parser) variableDeclaration() (Stmt, error) {
 	tok, consumeError := parser.consume(token.IDENTIFIER, "Expected variable name")
 	if consumeError != nil {
@@ -291,6 +290,54 @@ func (parser *Parser) expressionStatement() (Stmt, error) {
 	return ExpressionStmt{Expression: expression}, nil
 }
 
+// assignment parses an assignment expression from the token stream.
+//
+// Steps:
+//  1. First, parse the left-hand side (LHS) as an equality expression.
+//     This ensures proper precedence, so assignment has lower precedence
+//     than equality and arithmetic operators.
+//  2. If the next token is an '=' (ASSIGN), then:
+//     - Recursively call `assignment` to parse the right-hand side (RHS).
+//     - Check if the LHS is a valid assignment target:
+//     * If it's a Variable, produce an Assign AST node with the variable name
+//     and the parsed RHS expression.
+//     * Otherwise, produce a syntax error, since only variables can be assigned.
+//  3. If no '=' follows, just return the previously parsed equality expression
+//     as the result.
+//
+// Returns:
+//   - Expression: Either an Assign node (for valid assignment expressions) or
+//     the underlying expression if no assignment is found.
+//   - error: Parsing errors such as invalid assignment targets or failed parsing of sub-expressions.
+//
+// Example:
+// Input:  x = 10
+// AST:    Assign{Name: x, Value: Literal(10)}
+func (parser *Parser) assignment() (Expression, error) {
+	expression, err := parser.equality()
+	if err != nil {
+		return nil, err
+	}
+	if parser.isMatch([]token.TokenType{token.ASSIGN}) {
+		equalsToken := parser.previous()
+		value, err := parser.assignment()
+		if err != nil {
+			return nil, err
+		}
+		switch v := expression.(type) {
+		case Variable:
+			name := v.Name
+			return Assign{Name: name, Value: value}, nil
+
+		default:
+			msg := "Invalid assignment"
+			return nil, CreateSyntaxError(equalsToken.Line, equalsToken.Column, msg)
+		}
+	}
+
+	return expression, nil
+}
+
 // expression is the entry point for parsing expressions. It begins at
 // the equality rule, which encompasses all lower-precedence rules.
 //
@@ -298,7 +345,7 @@ func (parser *Parser) expressionStatement() (Stmt, error) {
 //   - Expression: the parsed expression AST node.
 //   - error: if parsing fails.
 func (parser *Parser) expression() (Expression, error) {
-	return parser.equality()
+	return parser.assignment()
 }
 
 // equality parses equality expressions using operators "==" and "!=".
