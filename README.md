@@ -4,6 +4,7 @@
 Nilan is a programming language I am currently developing for fun 🚀, implemented in Go.
 My goal is to learn more about how programming languages work under the hood and to explore the different pipelines involved — from taking source code as input to making the CPU execute instructions 🤖.
 
+
 ## Features
 
 ✅ Write the press release
@@ -18,6 +19,10 @@ My goal is to learn more about how programming languages work under the hood and
 
 ✅ Parenthesized expressions
 
+✅ Variable identifiers and names
+
+✅ Assignment statements (e.g., `a = 2`)
+
 ✅ Unary operations: logical not `!`, negation `-`
 
 ✅ REPL (Read-Eval-Print Loop) for interactive testing
@@ -28,9 +33,7 @@ My goal is to learn more about how programming languages work under the hood and
 
 Currently, Nilan supports only very primitive expressions and literals. The following are **not supported** yet:
 
-🔴 Variable identifiers and names
 
-🔴 Assignment statements (e.g., `a = 2`)
 
 🔴 String literals and operations
 
@@ -41,6 +44,8 @@ Currently, Nilan supports only very primitive expressions and literals. The foll
 🔴 Control flow constructs (e.g., `if`, loops)
 
 🔴 Exponentiation or other advanced operators
+
+🔴 Tree-Walk interpreter
 
 
 ## Quick Start
@@ -58,12 +63,34 @@ Start typing Nilan expressions in the interactive prompt.
 Nilan’s grammar is defined using **ISO Extended Backus–Naur Form (ISO EBNF)**, conforming to [ISO/IEC 14977](https://www.iso.org/standard/26153.html).
 
 ```ebnf
-equality   = comparison , { ( '!=' | '==' ) , comparison } ;
-comparison = term , { ( '>' | '>=' | '<' | '<=' ) , term } ;
-term       = factor , { ( '+' | '-' ) , factor } ;
-factor     = unary , { ( '*' | '/' ) , unary } ;
-unary      = ( '!' | '-' ) , unary | primary ;
-primary    = ( 'FLOAT' | 'INT' | 'true' | 'false' | 'null' ) | '(' , expression , ')' ;
+program = statement, EOF ;
+
+statement = expression | printStmt ;
+
+expression = assignment ;
+
+assignment = IDENTIFIER, "=", assignment
+           | equality ;
+
+equality = comparison, { ("!=", "=="), comparison } ;
+
+comparison = term, { (">" | ">=" | "<" | "<="), term } ;
+
+term = factor, { ("+" | "-"), factor } ;
+
+factor = unary, { ("*" | "/"), unary } ;
+
+unary = ("!" | "-"), unary
+      | primary ;
+
+primary = FLOAT 
+        | INT 
+        | IDENTIFIER 
+        | "true" 
+        | "false" 
+        | "null" 
+        | "(", expression, ")" ;
+
 ```
 
 > 💡 Currently, the grammar and parser support only basic constructs such as logical, arithmetic, unary operations, literals, and parenthesized expressions.
@@ -280,7 +307,7 @@ primary = 'IDENTIFIER' | ( 'FLOAT' | 'INT' | 'true' | 'false' | 'null' ) | '(' ,
 ```
 
 3. **Implement Semantics**
-TODO: Add section when compiler or interpreter is implemented
+TODO: Add section when interpreter is implemented
 
 ## Development
 
