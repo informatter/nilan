@@ -55,6 +55,10 @@ func (i *TreeWalkInterpreter) VisitExpressionStmt(exprStatement parser.Expressio
 //   - any: always nil because print statements have no return value.
 func (i *TreeWalkInterpreter) VisitPrintStmt(printStmt parser.PrintStmt) any {
 	value := i.evaluate(printStmt.Expression)
+	if value == nil {
+		fmt.Println("null")
+		return nil
+	}
 	fmt.Println(value)
 	return nil
 }
@@ -63,8 +67,8 @@ func (i *TreeWalkInterpreter) VisitPrintStmt(printStmt parser.PrintStmt) any {
 // It evaluates the initialiser expression of the statement if it contains one
 // and it sets the name of the variable to its evaluated value.
 // Returns:
-//  - nil: This method returns nil, as it mutates its own state to store
-//    a variable name to its value
+//   - nil: This method returns nil, as it mutates its own state to store
+//     a variable name to its value
 func (i *TreeWalkInterpreter) VisitVarStmt(varStmt parser.VarStmt) any {
 	var value any = nil
 	if varStmt.Initializer != nil {
@@ -72,6 +76,34 @@ func (i *TreeWalkInterpreter) VisitVarStmt(varStmt parser.VarStmt) any {
 	}
 	i.environment.set(varStmt.Name.Lexeme, value)
 	return nil
+}
+
+// VisitAssignExpression evaluates an assignment expression node and updates
+// the value of the corresponding variable in the environment.
+//
+// Steps:
+//  1. The right-hand side expression (`assign.Value`) is evaluated using
+//     the interpreter's `evaluate` method.
+//  2. The resulting value is attempted to be assigned to the variable
+//     identified by `assign.Name` via the environment's `assign` method.
+//  3. If the variable is undefined in the current environment, a runtime
+//     error is returned by `assign`.
+//  4. On success, the new value is returned.
+//
+// Parameters:
+//   - assign: An assignment AST node containing the variable token (Name)
+//     and the expression to evaluate (Value).
+//
+// Returns:
+//   - any: The value resulting from evaluating `assign.Value`, which is
+//     also the value bound to the variable after the assignment.
+func (i *TreeWalkInterpreter) VisitAssignExpression(assign parser.Assign) any {
+	value := i.evaluate(assign.Value)
+	err := i.environment.assign(assign.Name, value)
+	if err != nil {
+		panic(err.Error())
+	}
+	return value
 }
 
 // VisitBinary evaluates a binary expression node.
@@ -214,14 +246,20 @@ func (i *TreeWalkInterpreter) VisitUnary(unary parser.Unary) any {
 
 // Retrieves the value for variable.
 // Returns:
-//  - The value of the variable
+//   - The value of the variable
+//
 // Raises:
-//  - RuntimeError: panics with a RuntimeError if attempting to access an undefined
-//    variable
+//   - RuntimeError: panics with a RuntimeError if attempting to access an undefined
+//     variable
 func (i *TreeWalkInterpreter) VisitVariableExpression(expression parser.Variable) any {
 	value, error := i.environment.get(expression.Name)
 	if error != nil {
 		panic(error)
+	}
+	if value == nil {
+		msg := fmt.Sprintf("Cant access uninitialised variable: %s", expression.Name.Lexeme)
+		err := CreateRuntimeError(expression.Name.Line, expression.Name.Column, msg)
+		panic(err)
 	}
 	return value
 }
@@ -254,7 +292,6 @@ func (i *TreeWalkInterpreter) VisitGrouping(grouping parser.Grouping) any {
 // Returns:
 //   - any: the evaluated value of the expression.
 func (i *TreeWalkInterpreter) evaluate(expression parser.Expression) any {
-	// return expression.Accept(TreeWalkInterpreter{})
 	return expression.Accept(i)
 }
 
