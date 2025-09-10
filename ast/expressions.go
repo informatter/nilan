@@ -6,7 +6,6 @@ import (
 	"nilan/token"
 )
 
-
 // Binary represents a binary operation expression (e.g., "a + b").
 // It consists of a left-hand side expression, an operator token (e.g., +, -, *, /),
 // and a right-hand side expression.

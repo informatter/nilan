@@ -36,7 +36,7 @@ func repl(in io.Reader, out io.Writer) {
 			fmt.Println(err)
 			continue
 		}
-		parser := parser.Create(tokens)
+		parser := parser.Make(tokens)
 		ast, errors := parser.Parse()
 		if len(errors) > 0 {
 			continue

@@ -1,12 +1,8 @@
 // statements.go contains all the statement AST nodes. A statement node does not produce a value.
 
-
 package ast
 
-
 import "nilan/token"
-
-
 
 // ExpressionStmt represents a statement that consists of a single expression.
 // Example: `foo + bar;`

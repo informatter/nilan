@@ -9,8 +9,8 @@ package parser
 
 import (
 	"fmt"
-	"nilan/token"
 	"nilan/ast"
+	"nilan/token"
 )
 
 var comparisonTokenTypes = []token.TokenType{

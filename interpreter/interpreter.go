@@ -2,8 +2,8 @@ package interpreter
 
 import (
 	"fmt"
-	"nilan/token"
 	"nilan/ast"
+	"nilan/token"
 	"strconv"
 )
 
