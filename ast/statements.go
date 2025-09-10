@@ -1,20 +1,12 @@
-package parser
+// statements.go contains all the statement AST nodes. A statement node does not produce a value.
+
+
+package ast
+
 
 import "nilan/token"
 
-// Stmt is the base interface for all statement nodes in the AST.
-// Like Expression, it follows the Visitor design pattern where each
-// statement type implements Accept, calling back into the correct
-// Visit method on a StmtVisitor.
-//
-// A statement represents an action in a program (e.g., printing,
-// evaluating an expression, variable declaration). Unlike expressions,
-// statements typically do not produce a value.
-type Stmt interface {
-	// Accept dispatches this statement to the appropriate Visit method
-	// of the provided StmtVisitor implementation.
-	Accept(v StmtVisitor) any
-}
+
 
 // ExpressionStmt represents a statement that consists of a single expression.
 // Example: `foo + bar;`

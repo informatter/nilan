@@ -1,21 +1,11 @@
-package parser
+// expressions.go contains all the expression AST nodes. A expression node always evaluates to a value.
+
+package ast
 
 import (
 	"nilan/token"
 )
 
-// Expression is the core interface for all expression nodes in the Abstract Syntax Tree (AST).
-// Any expression type (e.g., binary operation, literal, grouping, etc.) must implement this interface.
-// The Accept method enables the Visitor design pattern so that operations can be performed on
-// expressions without the expression types needing to know the details of those operations.
-// The visitor pattern decoupled behaviour from data to easily allow adding the behaviour to objects
-// without the need to change the objects themselves.
-type Expression interface {
-	// Accept dispatches the current expression node to the appropriate method on a Visitor.
-	// v: the Visitor instance that defines behavior for this expression type
-	// Returns: a generic result (any), since the Visitor may define its own return type
-	Accept(v Visitor) any
-}
 
 // Binary represents a binary operation expression (e.g., "a + b").
 // It consists of a left-hand side expression, an operator token (e.g., +, -, *, /),
@@ -26,7 +16,7 @@ type Binary struct {
 	Right    Expression  // The right-hand expression (e.g., "b" in "a + b")
 }
 
-func (binary Binary) Accept(v Visitor) any {
+func (binary Binary) Accept(v ExpressionVisitor) any {
 	return v.VisitBinary(binary)
 }
 
@@ -37,7 +27,7 @@ type Unary struct {
 	Right    Expression  // The expression the operator is applied to (e.g., "a" or "b")
 }
 
-func (unary Unary) Accept(v Visitor) any {
+func (unary Unary) Accept(v ExpressionVisitor) any {
 	return v.VisitUnary(unary)
 }
 
@@ -47,7 +37,7 @@ type Literal struct {
 	Value any // The literal value (Go's `any` allows different possible types)
 }
 
-func (literal Literal) Accept(v Visitor) any {
+func (literal Literal) Accept(v ExpressionVisitor) any {
 	return v.VisitLiteral(literal)
 }
 
@@ -57,7 +47,7 @@ type Grouping struct {
 	Expression Expression // The inner expression inside the parentheses
 }
 
-func (grouping Grouping) Accept(v Visitor) any {
+func (grouping Grouping) Accept(v ExpressionVisitor) any {
 	return v.VisitGrouping(grouping)
 }
 
@@ -73,7 +63,7 @@ type Variable struct {
 // Fields:
 //   - Name: The token corresponding to the variable's identifier. This is an
 //     IDENTIFIER token that holds the variable's name (lexeme).
-func (variable Variable) Accept(v Visitor) any {
+func (variable Variable) Accept(v ExpressionVisitor) any {
 	return v.VisitVariableExpression(variable)
 }
 
@@ -90,6 +80,6 @@ type Assign struct {
 	Value Expression
 }
 
-func (assign Assign) Accept(v Visitor) any {
+func (assign Assign) Accept(v ExpressionVisitor) any {
 	return v.VisitAssignExpression(assign)
 }
