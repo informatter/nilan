@@ -10,6 +10,7 @@ package parser
 import (
 	"fmt"
 	"nilan/token"
+	"nilan/ast"
 )
 
 var comparisonTokenTypes = []token.TokenType{
@@ -65,7 +66,7 @@ type Parser struct {
 //
 // Returns:
 //   - *Parser: A pointer to a newly created Parser instance.
-func Create(tokens []token.Token) *Parser {
+func Make(tokens []token.Token) *Parser {
 	return &Parser{
 		tokens:   tokens,
 		position: 0,
@@ -78,7 +79,7 @@ func Create(tokens []token.Token) *Parser {
 //
 // This method does not return any value; its purpose is to output
 // formatted representations of the AST nodes to standard output.
-func (parser *Parser) Print(statements []Stmt) {
+func (parser *Parser) Print(statements []ast.Stmt) {
 	for _, s := range statements {
 		result := s.Accept(astPrinter{})
 		fmt.Println(result)
@@ -162,8 +163,8 @@ func (parser *Parser) isMatch(tokenTypes []token.TokenType) bool {
 // Returns:
 //   - []Stmt: the successfully parsed statements.
 //   - []error: all errors that occurred during parsing.
-func (parser *Parser) Parse() ([]Stmt, []error) {
-	statements := []Stmt{}
+func (parser *Parser) Parse() ([]ast.Stmt, []error) {
+	statements := []ast.Stmt{}
 	errors := []error{}
 
 	for {
@@ -195,7 +196,7 @@ func (parser *Parser) Parse() ([]Stmt, []error) {
 // If the next token is not a variable declaration, it parses a general statement.
 //
 // Returns the parsed statement (Stmt) or an error if parsing fails.
-func (parser *Parser) declaration() (Stmt, error) {
+func (parser *Parser) declaration() (ast.Stmt, error) {
 	if parser.isMatch([]token.TokenType{token.VAR}) {
 		return parser.variableDeclaration()
 	}
@@ -220,13 +221,13 @@ func (parser *Parser) declaration() (Stmt, error) {
 // Example input:
 //
 //	>>> var x = 10
-func (parser *Parser) variableDeclaration() (Stmt, error) {
+func (parser *Parser) variableDeclaration() (ast.Stmt, error) {
 	tok, consumeError := parser.consume(token.IDENTIFIER, "Expected variable name")
 	if consumeError != nil {
 		return nil, consumeError
 	}
 
-	var initialiser Expression
+	var initialiser ast.Expression
 	if parser.isMatch([]token.TokenType{token.ASSIGN}) {
 		var err error
 		initialiser, err = parser.expression()
@@ -235,7 +236,7 @@ func (parser *Parser) variableDeclaration() (Stmt, error) {
 		}
 	}
 
-	return VarStmt{
+	return ast.VarStmt{
 		Name:        tok,
 		Initializer: initialiser,
 	}, nil
@@ -247,7 +248,7 @@ func (parser *Parser) variableDeclaration() (Stmt, error) {
 // Returns:
 //   - Stmt: the parsed statement node.
 //   - error: if parsing fails, otherwise nil.
-func (parser *Parser) statement() (Stmt, error) {
+func (parser *Parser) statement() (ast.Stmt, error) {
 
 	if parser.isMatch([]token.TokenType{token.PRINT}) {
 		printStatement, err := parser.printStatement()
@@ -269,12 +270,12 @@ func (parser *Parser) statement() (Stmt, error) {
 // Returns:
 //   - Stmt: a PrintStmt containing the expression to print.
 //   - error: if the inner expression fails to parse.
-func (parser *Parser) printStatement() (Stmt, error) {
+func (parser *Parser) printStatement() (ast.Stmt, error) {
 	expression, err := parser.expression()
 	if err != nil {
 		return nil, err
 	}
-	return PrintStmt{Expression: expression}, nil
+	return ast.PrintStmt{Expression: expression}, nil
 }
 
 // expressionStatement parses a statement consisting of a single expression.
@@ -282,12 +283,12 @@ func (parser *Parser) printStatement() (Stmt, error) {
 // Returns:
 //   - Stmt: an ExpressionStmt wrapping the parsed expression.
 //   - error: if the expression cannot be parsed.
-func (parser *Parser) expressionStatement() (Stmt, error) {
+func (parser *Parser) expressionStatement() (ast.Stmt, error) {
 	expression, err := parser.expression()
 	if err != nil {
 		return nil, err
 	}
-	return ExpressionStmt{Expression: expression}, nil
+	return ast.ExpressionStmt{Expression: expression}, nil
 }
 
 // assignment parses an assignment expression from the token stream.
@@ -313,7 +314,7 @@ func (parser *Parser) expressionStatement() (Stmt, error) {
 // Example:
 // Input:  x = 10
 // AST:    Assign{Name: x, Value: Literal(10)}
-func (parser *Parser) assignment() (Expression, error) {
+func (parser *Parser) assignment() (ast.Expression, error) {
 	expression, err := parser.equality()
 	if err != nil {
 		return nil, err
@@ -325,9 +326,9 @@ func (parser *Parser) assignment() (Expression, error) {
 			return nil, err
 		}
 		switch v := expression.(type) {
-		case Variable:
+		case ast.Variable:
 			name := v.Name
-			return Assign{Name: name, Value: value}, nil
+			return ast.Assign{Name: name, Value: value}, nil
 
 		default:
 			msg := "Invalid assignment"
@@ -344,7 +345,7 @@ func (parser *Parser) assignment() (Expression, error) {
 // Returns:
 //   - Expression: the parsed expression AST node.
 //   - error: if parsing fails.
-func (parser *Parser) expression() (Expression, error) {
+func (parser *Parser) expression() (ast.Expression, error) {
 	return parser.assignment()
 }
 
@@ -353,7 +354,7 @@ func (parser *Parser) expression() (Expression, error) {
 // Returns:
 //   - Expression: a Binary node (or sub-expression) representing equality comparison.
 //   - error: if parsing fails.
-func (parser *Parser) equality() (Expression, error) {
+func (parser *Parser) equality() (ast.Expression, error) {
 	exp, err := parser.comparison()
 	if err != nil {
 		return nil, err
@@ -364,7 +365,7 @@ func (parser *Parser) equality() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		exp = Binary{
+		exp = ast.Binary{
 			Left:     exp,
 			Operator: operator,
 			Right:    right,
@@ -378,7 +379,7 @@ func (parser *Parser) equality() (Expression, error) {
 // Returns:
 //   - Expression: a Binary node (or sub-expression) representing a comparison.
 //   - error: if parsing fails.
-func (parser *Parser) comparison() (Expression, error) {
+func (parser *Parser) comparison() (ast.Expression, error) {
 	exp, err := parser.term()
 	if err != nil {
 		return nil, err
@@ -389,7 +390,7 @@ func (parser *Parser) comparison() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		exp = Binary{
+		exp = ast.Binary{
 			Left:     exp,
 			Operator: operator,
 			Right:    right,
@@ -403,7 +404,7 @@ func (parser *Parser) comparison() (Expression, error) {
 // Returns:
 //   - Expression: a Binary node (or sub-expression) representing addition or subtraction.
 //   - error: if parsing fails.
-func (parser *Parser) term() (Expression, error) {
+func (parser *Parser) term() (ast.Expression, error) {
 	exp, err := parser.factor()
 	if err != nil {
 		return nil, err
@@ -414,7 +415,7 @@ func (parser *Parser) term() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		exp = Binary{
+		exp = ast.Binary{
 			Left:     exp,
 			Operator: operator,
 			Right:    right,
@@ -428,7 +429,7 @@ func (parser *Parser) term() (Expression, error) {
 // Returns:
 //   - Expression: a Binary node (or sub-expression) representing multiplication or division.
 //   - error: if parsing fails.
-func (parser *Parser) factor() (Expression, error) {
+func (parser *Parser) factor() (ast.Expression, error) {
 	exp, err := parser.unary()
 	if err != nil {
 		return nil, err
@@ -439,7 +440,7 @@ func (parser *Parser) factor() (Expression, error) {
 		if err != nil {
 			return nil, err
 		}
-		exp = Binary{
+		exp = ast.Binary{
 			Left:     exp,
 			Operator: operator,
 			Right:    right,
@@ -454,14 +455,14 @@ func (parser *Parser) factor() (Expression, error) {
 // Returns:
 //   - Expression: a Unary node if a unary operator was found, otherwise defers to primary().
 //   - error: if parsing fails.
-func (parser *Parser) unary() (Expression, error) {
+func (parser *Parser) unary() (ast.Expression, error) {
 	if parser.isMatch(unaryExpressionTypes) {
 		operator := parser.previous()
 		right, err := parser.unary()
 		if err != nil {
 			return nil, err
 		}
-		return Unary{
+		return ast.Unary{
 			Operator: operator,
 			Right:    right,
 		}, nil
@@ -478,23 +479,23 @@ func (parser *Parser) unary() (Expression, error) {
 // Returns:
 //   - Expression: a Literal, Grouping expression .
 //   - error: if no valid primary expression can be parsed.
-func (parser *Parser) primary() (Expression, error) {
+func (parser *Parser) primary() (ast.Expression, error) {
 	if parser.isMatch([]token.TokenType{token.FALSE}) {
-		return Literal{Value: false}, nil
+		return ast.Literal{Value: false}, nil
 	}
 	if parser.isMatch([]token.TokenType{token.NULL}) {
-		return Literal{Value: nil}, nil
+		return ast.Literal{Value: nil}, nil
 	}
 	if parser.isMatch([]token.TokenType{token.TRUE}) {
-		return Literal{Value: true}, nil
+		return ast.Literal{Value: true}, nil
 	}
 
 	if parser.isMatch([]token.TokenType{token.FLOAT, token.INT, token.STRING}) {
-		return Literal{Value: parser.previous().Literal}, nil
+		return ast.Literal{Value: parser.previous().Literal}, nil
 	}
 
 	if parser.isMatch([]token.TokenType{token.IDENTIFIER}) {
-		return Variable{Name: parser.previous()}, nil
+		return ast.Variable{Name: parser.previous()}, nil
 	}
 
 	if parser.isMatch([]token.TokenType{token.LPA}) {
@@ -506,7 +507,7 @@ func (parser *Parser) primary() (Expression, error) {
 		if consumeErr != nil {
 			return nil, consumeErr
 		}
-		return Grouping{Expression: expr}, nil
+		return ast.Grouping{Expression: expr}, nil
 	}
 
 	currentToken := parser.peek()
