@@ -2,8 +2,8 @@ package interpreter
 
 import (
 	"fmt"
-	"nilan/parser"
 	"nilan/token"
+	"nilan/ast"
 	"strconv"
 )
 
@@ -21,7 +21,7 @@ func Make() *TreeWalkInterpreter {
 
 // Interpret executes a list of statements.
 // It recovers from panics to print runtime errors without crashing.
-func (i *TreeWalkInterpreter) Interpret(statements []parser.Stmt) {
+func (i *TreeWalkInterpreter) Interpret(statements []ast.Stmt) {
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Println(r)
@@ -32,7 +32,7 @@ func (i *TreeWalkInterpreter) Interpret(statements []parser.Stmt) {
 
 // executeStatements executes each statement by invoking its Accept method
 // with a fresh Interpreter visitor. It does not return anything.
-func (i *TreeWalkInterpreter) executeStatements(statements []parser.Stmt) {
+func (i *TreeWalkInterpreter) executeStatements(statements []ast.Stmt) {
 	for _, s := range statements {
 		s.Accept(i)
 	}
@@ -43,7 +43,7 @@ func (i *TreeWalkInterpreter) executeStatements(statements []parser.Stmt) {
 //
 // Returns:
 //   - any: always nil because statements do not produce values.
-func (i *TreeWalkInterpreter) VisitExpressionStmt(exprStatement parser.ExpressionStmt) any {
+func (i *TreeWalkInterpreter) VisitExpressionStmt(exprStatement ast.ExpressionStmt) any {
 	i.evaluate(exprStatement.Expression)
 	return nil
 }
@@ -53,7 +53,7 @@ func (i *TreeWalkInterpreter) VisitExpressionStmt(exprStatement parser.Expressio
 //
 // Returns:
 //   - any: always nil because print statements have no return value.
-func (i *TreeWalkInterpreter) VisitPrintStmt(printStmt parser.PrintStmt) any {
+func (i *TreeWalkInterpreter) VisitPrintStmt(printStmt ast.PrintStmt) any {
 	value := i.evaluate(printStmt.Expression)
 	if value == nil {
 		fmt.Println("null")
@@ -69,7 +69,7 @@ func (i *TreeWalkInterpreter) VisitPrintStmt(printStmt parser.PrintStmt) any {
 // Returns:
 //   - nil: This method returns nil, as it mutates its own state to store
 //     a variable name to its value
-func (i *TreeWalkInterpreter) VisitVarStmt(varStmt parser.VarStmt) any {
+func (i *TreeWalkInterpreter) VisitVarStmt(varStmt ast.VarStmt) any {
 	var value any = nil
 	if varStmt.Initializer != nil {
 		value = i.evaluate(varStmt.Initializer)
@@ -97,7 +97,7 @@ func (i *TreeWalkInterpreter) VisitVarStmt(varStmt parser.VarStmt) any {
 // Returns:
 //   - any: The value resulting from evaluating `assign.Value`, which is
 //     also the value bound to the variable after the assignment.
-func (i *TreeWalkInterpreter) VisitAssignExpression(assign parser.Assign) any {
+func (i *TreeWalkInterpreter) VisitAssignExpression(assign ast.Assign) any {
 	value := i.evaluate(assign.Value)
 	err := i.environment.assign(assign.Name, value)
 	if err != nil {
@@ -115,7 +115,7 @@ func (i *TreeWalkInterpreter) VisitAssignExpression(assign parser.Assign) any {
 //   - any: evaluated result of the binary expression (number, string, bool).
 //
 // Panics on invalid operands or unsupported operators.
-func (i *TreeWalkInterpreter) VisitBinary(binary parser.Binary) any {
+func (i *TreeWalkInterpreter) VisitBinary(binary ast.Binary) any {
 	leftResult := i.evaluate(binary.Left)
 	rightResult := i.evaluate(binary.Right)
 	operator := binary.Operator.TokenType
@@ -216,7 +216,7 @@ func (i *TreeWalkInterpreter) VisitBinary(binary parser.Binary) any {
 //   - any: the evaluated result of the unary operation.
 //
 // Panics on invalid operand types or unsupported operators.
-func (i *TreeWalkInterpreter) VisitUnary(unary parser.Unary) any {
+func (i *TreeWalkInterpreter) VisitUnary(unary ast.Unary) any {
 	rightResult := i.evaluate(unary.Right)
 	operator := unary.Operator.TokenType
 	switch operator {
@@ -251,7 +251,7 @@ func (i *TreeWalkInterpreter) VisitUnary(unary parser.Unary) any {
 // Raises:
 //   - RuntimeError: panics with a RuntimeError if attempting to access an undefined
 //     variable
-func (i *TreeWalkInterpreter) VisitVariableExpression(expression parser.Variable) any {
+func (i *TreeWalkInterpreter) VisitVariableExpression(expression ast.Variable) any {
 	value, error := i.environment.get(expression.Name)
 	if error != nil {
 		panic(error)
@@ -271,7 +271,7 @@ func (i *TreeWalkInterpreter) VisitVariableExpression(expression parser.Variable
 //
 // Returns:
 //   - any: the literal's underlying value.
-func (i *TreeWalkInterpreter) VisitLiteral(literal parser.Literal) any {
+func (i *TreeWalkInterpreter) VisitLiteral(literal ast.Literal) any {
 	return literal.Value
 }
 
@@ -282,7 +282,7 @@ func (i *TreeWalkInterpreter) VisitLiteral(literal parser.Literal) any {
 //
 // Returns:
 //   - any: the value of the enclosed expression.
-func (i *TreeWalkInterpreter) VisitGrouping(grouping parser.Grouping) any {
+func (i *TreeWalkInterpreter) VisitGrouping(grouping ast.Grouping) any {
 	return i.evaluate(grouping.Expression)
 }
 
@@ -291,7 +291,7 @@ func (i *TreeWalkInterpreter) VisitGrouping(grouping parser.Grouping) any {
 //
 // Returns:
 //   - any: the evaluated value of the expression.
-func (i *TreeWalkInterpreter) evaluate(expression parser.Expression) any {
+func (i *TreeWalkInterpreter) evaluate(expression ast.Expression) any {
 	return expression.Accept(i)
 }
 
