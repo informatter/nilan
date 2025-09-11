@@ -2,55 +2,67 @@ package lexer
 
 import (
 	"nilan/token"
-	"reflect"
 	"testing"
 )
 
-func runTest(t *testing.T, testName string, scanner *Lexer, expected []token.Token) {
 
-	t.Run(testName, func(t *testing.T) {
-		got, err := scanner.Scan()
-		if err != nil {
-			t.Errorf("scanner.Scan() raised an error: %v", err)
+func runTest(expected []token.Token, scanner *Lexer,t *testing.T) {
+
+	result, err := scanner.Scan()
+	if err != nil {
+		t.Errorf("scanner.Scan() raised an error: %v", err)
+	}
+
+	for i, tt := range expected {
+		tok := result[i]
+
+		if tok.TokenType != tt.TokenType {
+			t.Fatalf("Wrong token type - expected: %q, got: %q", tt.TokenType, tok.TokenType)
+		}
+		if tok.Lexeme != tt.Lexeme {
+			t.Fatalf("Wrong lexeme - expected: %q, got: %q", tt.Lexeme, tok.Lexeme)
 		}
 
-		// Use reflect.DeepEqual to compare the slices
-		if !reflect.DeepEqual(got, expected) {
-			t.Errorf("scanner.Scan() = %v, want %v", got, expected)
+		if tok.Literal != tt.Literal {
+
+			t.Fatalf("Wrong literal - expected: %q, got: %q", tt.Lexeme, tok.Lexeme)
 		}
-	})
+
+	}
 }
 
 func TestScanLoose(t *testing.T) {
-	testName := "TestScanLoose"
+	
 	expected := []token.Token{
-		token.CreateToken(token.LPA),
-		token.CreateToken(token.RPA),
-		token.CreateToken(token.LCUR),
-		token.CreateToken(token.RCUR),
-		token.CreateToken(token.MULT),
-		token.CreateToken(token.MULT),
-		token.CreateToken(token.SEMICOLON),
-		token.CreateToken(token.ADD),
-		token.CreateToken(token.BANG),
-		token.CreateToken(token.ASSIGN),
-		token.CreateToken(token.LESS),
-		token.CreateToken(token.EQUAL_EQUAL),
-		token.CreateToken(token.EQUAL_EQUAL),
-		token.CreateToken(token.EQUAL_EQUAL),
-		token.CreateToken(token.EQUAL_EQUAL),
-		token.CreateToken(token.NOT_EQUAL),
-		token.CreateToken(token.LESS_EQUAL),
-		token.CreateToken(token.LESS_EQUAL),
-		token.CreateToken(token.LARGER_EQUAL),
-		token.CreateToken(token.LARGER_EQUAL),
-		token.CreateToken(token.EQUAL_EQUAL),
-		token.CreateToken(token.NOT_EQUAL),
-		token.CreateLiteralToken(token.IDENTIFIER, "my_var"),
-		token.CreateToken(token.ASSIGN),
-		token.CreateToken(token.LCUR),
-		token.CreateToken(token.RCUR),
-		token.CreateToken(token.EOF),
+		token.CreateToken(token.LPA,0,0),
+		token.CreateToken(token.RPA,0,0),
+		token.CreateToken(token.LCUR,0,0),
+		token.CreateToken(token.RCUR,0,0),
+		token.CreateToken(token.MULT,0,0),
+		token.CreateToken(token.MULT,0,0),
+		token.CreateToken(token.SEMICOLON,0,0),
+		token.CreateToken(token.ADD,0,0),
+		token.CreateToken(token.BANG,0,0),
+		token.CreateToken(token.ASSIGN,0,0),
+		token.CreateToken(token.LESS,0,0),
+		token.CreateToken(token.EQUAL_EQUAL,0,0),
+		token.CreateToken(token.EQUAL_EQUAL,0,0),
+		token.CreateToken(token.EQUAL_EQUAL,0,0),
+		token.CreateToken(token.EQUAL_EQUAL,0,0),
+		token.CreateToken(token.NOT_EQUAL,0,0),
+		token.CreateToken(token.LESS_EQUAL,0,0),
+		token.CreateToken(token.LESS_EQUAL,0,0),
+		token.CreateToken(token.LARGER_EQUAL,0,0),
+		token.CreateToken(token.LARGER_EQUAL,0,0),
+		token.CreateToken(token.EQUAL_EQUAL,0,0),
+		token.CreateToken(token.NOT_EQUAL,0,0),
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "my_var",
+		},
+		token.CreateToken(token.ASSIGN,0,0),
+		token.CreateToken(token.LCUR,0,0),
+		token.CreateToken(token.RCUR,0,0),
+		token.CreateToken(token.EOF,0,0),
 	}
 
 	test := `
@@ -65,46 +77,57 @@ func TestScanLoose(t *testing.T) {
 	<= <=
 	>=
 	>===!=
-	# my_var = {}
+	my_var = {}
 	# some comment # # # # 
-	my_var = {
-	}
+	#my_var = {
+	#}
 	`
 	scanner := CreateLexer(test)
-	runTest(t, testName, scanner, expected)
+	runTest(expected, scanner, t)
 
 }
 
+
 func TestLiteralStrings(t *testing.T) {
-	testName := "TestLiteralStrings"
+
 	multiLine := `
 	 this is a multi line comment
 	 which continues here
 	`
 	expected := []token.Token{
-		token.CreateLiteralToken(token.VAR, "var"),
-		token.CreateLiteralToken(token.IDENTIFIER, "myString"),
-		token.CreateToken(token.ASSIGN),
-		token.CreateLiteralToken(token.STRING, "hellow"),
-		token.CreateLiteralToken(token.STRING, "hi"),
-		token.CreateLiteralToken(token.VAR, "var"),
-		token.CreateLiteralToken(token.IDENTIFIER, "tabedString"),
-		token.CreateToken(token.ASSIGN),
-		token.CreateLiteralToken(token.STRING, "tabed		"),
-		token.CreateLiteralToken(token.STRING, multiLine),
-		token.CreateToken(token.EOF),
+		{
+			TokenType: token.VAR, Lexeme: "var",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "myString",
+		},
+		token.CreateToken(token.ASSIGN,0,0),
+		token.CreateLiteralToken(token.STRING, "hellow","hellow",0,0),
+
+		token.CreateLiteralToken(token.STRING, "hi","hi",0,0),
+		{
+			TokenType: token.VAR, Lexeme: "var",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "tabedString",
+		},
+		token.CreateToken(token.ASSIGN,0,0),
+		token.CreateLiteralToken(token.STRING, "tabed	","tabed	",0,0),
+		token.CreateLiteralToken(token.STRING, multiLine,multiLine,0,0),
+		token.CreateToken(token.EOF,0,0),
 	}
 	test := `
 	var myString = "hellow" "hi"
-	var tabedString = "tabed		"
+	var tabedString = "tabed	"
 	"
 	 this is a multi line comment
 	 which continues here
 	"
 	`
 	scanner := CreateLexer(test)
-	runTest(t, testName, scanner, expected)
+	runTest(expected,scanner,t)
 }
+
 func TestHandleStringLiteralErrors(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -151,56 +174,115 @@ func TestHandleStringLiteralErrors(t *testing.T) {
 }
 
 func TestScanSourceCode(t *testing.T) {
-	testName := "TestScanSourceCode"
+	
 	expected := []token.Token{
-		token.CreateLiteralToken(token.FUNC, "fn"),
-		token.CreateLiteralToken(token.IDENTIFIER, "myFunction"),
-		token.CreateToken(token.LPA),
-		token.CreateLiteralToken(token.IDENTIFIER, "a"),
-		token.CreateToken(token.COMMA),
-		token.CreateLiteralToken(token.IDENTIFIER, "b"),
-		token.CreateToken(token.RPA),
-		token.CreateToken(token.LCUR),
-		token.CreateLiteralToken(token.RETURN, "return"),
-		token.CreateLiteralToken(token.IDENTIFIER, "a"),
-		token.CreateToken(token.ADD),
-		token.CreateLiteralToken(token.IDENTIFIER, "b"),
-		token.CreateToken(token.RCUR),
-		token.CreateLiteralToken(token.VAR, "var"),
-		token.CreateLiteralToken(token.IDENTIFIER, "result"),
-		token.CreateToken(token.ASSIGN),
-		token.CreateLiteralToken(token.IDENTIFIER, "myFunction"),
-		token.CreateToken(token.LPA),
-		token.CreateLiteralToken(token.INT, "2"),
-		token.CreateToken(token.ADD),
-		token.CreateLiteralToken(token.INT, "5"),
-		token.CreateToken(token.RPA),
-		token.CreateLiteralToken(token.VAR, "var"),
-		token.CreateLiteralToken(token.IDENTIFIER, "_foo_bar"),
-		token.CreateToken(token.ASSIGN),
-		token.CreateLiteralToken(token.FLOAT, "0.000001"),
-		token.CreateLiteralToken(token.VAR, "var"),
-		token.CreateLiteralToken(token.IDENTIFIER, "myInt"),
-		token.CreateToken(token.ASSIGN),
-		token.CreateLiteralToken(token.INT, "123"),
-		token.CreateLiteralToken(token.VAR, "var"),
-		token.CreateLiteralToken(token.IDENTIFIER, "myNegativeInt"),
-		token.CreateToken(token.ASSIGN),
-		token.CreateLiteralToken(token.INT, "-123"),
-		token.CreateLiteralToken(token.VAR, "var"),
-		token.CreateLiteralToken(token.IDENTIFIER, "myNegativeFloat"),
-		token.CreateToken(token.ASSIGN),
-		token.CreateLiteralToken(token.FLOAT, "-0.01"),
-		token.CreateLiteralToken(token.VAR, "var"),
-		token.CreateLiteralToken(token.IDENTIFIER, "myString"),
-		token.CreateToken(token.ASSIGN),
-		token.CreateLiteralToken(token.STRING, "hellow"),
-		token.CreateLiteralToken(token.IF, "if"),
-		token.CreateLiteralToken(token.AND, "and"),
-		token.CreateLiteralToken(token.OR, "or"),
-		token.CreateLiteralToken(token.WHILE, "while"),
-		token.CreateLiteralToken(token.FOR, "for"),
-		token.CreateToken(token.EOF),
+	
+		{
+			TokenType: token.FUNC, Lexeme: "fn",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "myFunction",
+		},
+		token.CreateToken(token.LPA,0,0),
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "a",
+		},
+		token.CreateToken(token.COMMA,0,0),
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "b",
+		},
+		token.CreateToken(token.RPA,0,0),
+		token.CreateToken(token.LCUR,0,0),
+		{
+			TokenType: token.RETURN, Lexeme: "return",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "a",
+		},
+		token.CreateToken(token.ADD,0,0),
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "b",
+		},
+		token.CreateToken(token.RCUR,0,0),
+
+		{
+			TokenType: token.VAR, Lexeme: "var",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "result",
+		},
+		token.CreateToken(token.ASSIGN,0,0),
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "myFunction",
+		},
+		token.CreateToken(token.LPA,0,0),
+		token.CreateLiteralToken(token.INT, int64(2),"2",0,0),
+		token.CreateToken(token.ADD,0,0),
+		token.CreateLiteralToken(token.INT, int64(5),"5",0,0),
+		token.CreateToken(token.RPA,0,0),
+		{
+			TokenType: token.VAR, Lexeme: "var",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "_foo_bar",
+		},
+		token.CreateToken(token.ASSIGN,0,0),
+		token.CreateLiteralToken(token.FLOAT, 0.000001,"0.000001",0,0),
+		{
+			TokenType: token.VAR, Lexeme: "var",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "myInt",
+		},
+		token.CreateToken(token.ASSIGN,0,0),
+		token.CreateLiteralToken(token.INT, int64(123),"123",0,0),
+		{
+			TokenType: token.VAR, Lexeme: "var",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "myNegativeInt",
+		},
+		token.CreateToken(token.ASSIGN,0,0),
+		{
+			TokenType: token.SUB, Lexeme: "-",
+		},
+		token.CreateLiteralToken(token.INT, int64(123),"123",0,0),
+		{
+			TokenType: token.VAR, Lexeme: "var",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "myNegativeFloat",
+		},
+		token.CreateToken(token.ASSIGN,0,0),
+		{
+			TokenType: token.SUB, Lexeme: "-",
+		},
+		token.CreateLiteralToken(token.FLOAT, 0.01,"0.01",0,0),
+		{
+			TokenType: token.VAR, Lexeme: "var",
+		},
+		{
+			TokenType: token.IDENTIFIER, Lexeme: "myString",
+		},
+		token.CreateToken(token.ASSIGN,0,0),
+		token.CreateLiteralToken(token.STRING, "hellow","hellow",0,0),
+	
+		{
+			TokenType: token.IF, Lexeme: "if",
+		},
+		{
+			TokenType: token.AND, Lexeme: "and",
+		},
+		{
+			TokenType: token.OR, Lexeme: "or",
+		},
+		{
+			TokenType: token.WHILE, Lexeme: "while",
+		},
+		{
+			TokenType: token.FOR, Lexeme: "for",
+		},
+		token.CreateToken(token.EOF,0,0),
 	}
 	test := `
 	fn myFunction(a, b){
@@ -212,11 +294,11 @@ func TestScanSourceCode(t *testing.T) {
 	var myNegativeInt = -123
 	var myNegativeFloat = -0.01
 	var myString = "hellow"
-
+	
 	if and or while for
 	`
 
 	scanner := CreateLexer(test)
-	runTest(t, testName, scanner, expected)
+	runTest(expected,scanner,t)
 
 }
