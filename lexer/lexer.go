@@ -246,8 +246,8 @@ func (lexer *Lexer) handleStringLiteral() error {
 		return fmt.Errorf("unclosed string literal: %s\nline: %v", lexer.Input[initPos+1:lexer.readPosition], lexer.lineCount)
 	}
 	literalValue := lexer.Input[initPos+1 : lexer.position]
-	lexeme := lexer.Input[initPos : lexer.position+1]
-	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(token.STRING, literalValue, lexeme, lexer.lineCount, lexer.column))
+	//lexeme := lexer.Input[initPos : lexer.position+1] -> includes escape chars which are not needed
+	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(token.STRING, literalValue, literalValue, lexer.lineCount, lexer.column))
 	return nil
 }
 
