@@ -174,7 +174,9 @@ func (parser *Parser) Parse() ([]ast.Stmt, []error) {
 		statement, err := parser.declaration()
 		if err != nil {
 			errors = append(errors, err)
-			parser.position++
+			if !parser.isFinished() {
+				parser.position++
+			}
 			continue
 		}
 		statements = append(statements, statement)
@@ -243,7 +245,8 @@ func (parser *Parser) variableDeclaration() (ast.Stmt, error) {
 }
 
 // statement parses a single statement. Currently, this can be either
-// a print statement ("print <expr>") or an expression statement.
+// a print statement ("print <expr>") an expression statement or
+// a block statement.
 //
 // Returns:
 //   - Stmt: the parsed statement node.
@@ -256,6 +259,14 @@ func (parser *Parser) statement() (ast.Stmt, error) {
 			return nil, err
 		}
 		return printStatement, nil
+	}
+
+	if parser.isMatch([]token.TokenType{token.LCUR}) {
+		statements, err := parser.block()
+		if err != nil {
+			return nil, err
+		}
+		return ast.BlockStmt{Statements: statements}, nil
 	}
 	// TODO: Add more expression types.
 	exprStatement, err := parser.expressionStatement()
@@ -289,6 +300,32 @@ func (parser *Parser) expressionStatement() (ast.Stmt, error) {
 		return nil, err
 	}
 	return ast.ExpressionStmt{Expression: expression}, nil
+}
+
+// block parser a block statement consisting of a list of
+// statement AST nodes.
+// Returns:
+//   - [] Stmt: A list of parsed declarations or statements
+//   - error: If the block statement cant be parsed.
+func (parser *Parser) block() ([]ast.Stmt, error) {
+	statements := []ast.Stmt{}
+
+	for !parser.isMatch([]token.TokenType{token.RCUR}) && !parser.isFinished() {
+		stmt, err := parser.declaration()
+		if err != nil {
+			return nil, err
+		}
+		statements = append(statements, stmt)
+
+	}
+
+	previousToken := parser.previous()
+	if previousToken.TokenType != token.RCUR {
+		errMsg := fmt.Sprintf("Expected '%s' after block.", token.RCUR)
+		err := CreateSyntaxError(previousToken.Line, previousToken.Column, errMsg)
+		return nil, err
+	}
+	return statements, nil
 }
 
 // assignment parses an assignment expression from the token stream.
