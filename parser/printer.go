@@ -22,6 +22,11 @@ func (p astPrinter) VisitVarStmt(varStmt ast.VarStmt) any {
 	return p.parenthesize(varStmt.Name.Lexeme, varStmt.Initializer)
 }
 
+func (p astPrinter) VisitBlockStmt(blockStmt ast.BlockStmt) any {
+	// TODO: Implement
+	return nil
+}
+
 func (p astPrinter) VisitAssignExpression(assign ast.Assign) any {
 	return p.parenthesize(assign.Name.Lexeme, assign.Value)
 }
