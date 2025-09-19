@@ -10,7 +10,8 @@ import (
 // where each key is a variable identifier and the value
 // is the data associated with that variable.
 type Environment struct {
-	values map[string]any
+	values    map[string]any
+	enclosing *Environment
 }
 
 // MakeEnvironment creates and returns a new, empty Environment instance.
@@ -20,7 +21,18 @@ type Environment struct {
 //     with an initialized values map.
 func MakeEnvironment() *Environment {
 	return &Environment{
-		values: make(map[string]any),
+		values:    make(map[string]any),
+		enclosing: nil,
+	}
+}
+
+// MakeNestedEnvironment creates a new Environment, scoped to enclose the provided
+// parent environment. This establishes a chain of environments for nested
+// variable lookups, supporting lexical scoping.
+func MakeNestedEnvironment(env *Environment) *Environment {
+	return &Environment{
+		values:    make(map[string]any),
+		enclosing: env,
 	}
 }
 
@@ -39,6 +51,10 @@ func (env *Environment) assign(name token.Token, value any) error {
 	_, ok := env.values[name.Lexeme]
 	if ok {
 		env.set(name.Lexeme, value)
+		return nil
+	}
+	if env.enclosing != nil {
+		env.enclosing.assign(name, value)
 		return nil
 	}
 
@@ -69,6 +85,9 @@ func (env *Environment) get(name token.Token) (any, error) {
 	value, ok := env.values[name.Lexeme]
 	if ok {
 		return value, nil
+	}
+	if env.enclosing != nil {
+		return env.enclosing.get(name)
 	}
 	msg := fmt.Sprintf("Undefined variable: %s", name.Lexeme)
 	return nil, CreateRuntimeError(name.Line, name.Column, msg)
