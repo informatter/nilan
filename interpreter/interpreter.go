@@ -30,12 +30,34 @@ func (i *TreeWalkInterpreter) Interpret(statements []ast.Stmt) {
 	i.executeStatements(statements)
 }
 
-// executeStatements executes each statement by invoking its Accept method
-// with a fresh Interpreter visitor. It does not return anything.
+// executeStatements executes each statement by invoking its Accept method.
 func (i *TreeWalkInterpreter) executeStatements(statements []ast.Stmt) {
 	for _, s := range statements {
 		s.Accept(i)
 	}
+}
+
+// VisitBlockStmt executes all statements in the given ast.BlockStmt
+// within a new nested environment. It temporarily replaces the current
+// interpreter environment with a new one scoped as a child of the previous environment.
+// A deferred function ensures that if a panic occurs, the environment
+// is restored and the panic is printed. After executing the statements,
+// the previous environment is always restored,
+// providing block-scoped execution and panic safety.
+func (i *TreeWalkInterpreter) VisitBlockStmt(blockStmt ast.BlockStmt) any {
+
+	previous := i.environment
+	i.environment = MakeNestedEnvironment(i.environment)
+	defer func() {
+		if r := recover(); r != nil {
+			i.environment = previous
+			fmt.Println(r)
+		}
+	}()
+
+	i.executeStatements(blockStmt.Statements)
+	i.environment = previous
+	return nil
 }
 
 // VisitExpressionStmt visits an ExpressionStmt node.
