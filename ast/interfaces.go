@@ -44,8 +44,8 @@ type StmtVisitor interface {
 	// visitVarStmt is called when visiting a declaration statement.
 	// Example: "name = 'foo'"
 	VisitVarStmt(varStmt VarStmt) any
-	
-// VisitBlockStmt is called when visiting a block statement. 
+
+	// VisitBlockStmt is called when visiting a block statement.
 	VisitBlockStmt(blockStmt BlockStmt) any
 
 	// TODO: Add further visit methods as new statement grammar rules are introduced.
