@@ -36,3 +36,13 @@ type VarStmt struct {
 func (varStmt VarStmt) Accept(v StmtVisitor) any {
 	return v.VisitVarStmt(varStmt)
 }
+
+// BlockStmt represents a block statement containing a list
+// of statement expression AST nodes.
+type BlockStmt struct {
+	Statements []Stmt
+}
+
+func (blockStmt BlockStmt) Accept(v StmtVisitor) any {
+	return v.VisitBlockStmt(blockStmt)
+}
