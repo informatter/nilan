@@ -37,6 +37,15 @@ func (i *TreeWalkInterpreter) executeStatements(statements []ast.Stmt) {
 	}
 }
 
+// executeStmt executes the given AST node statement by invoking its Accept method,
+// which calls the appropriate Visit method of the interpreter.
+func (i *TreeWalkInterpreter) executeStmt(stmt ast.Stmt) {
+
+	// Implements the visitor pattern to process different
+	// kinds of statements polymorphically.
+	stmt.Accept(i)
+}
+
 // VisitBlockStmt executes all statements in the given ast.BlockStmt
 // within a new nested environment. It temporarily replaces the current
 // interpreter environment with a new one scoped as a child of the previous environment.
@@ -67,6 +76,24 @@ func (i *TreeWalkInterpreter) VisitBlockStmt(blockStmt ast.BlockStmt) any {
 //   - any: always nil because statements do not produce values.
 func (i *TreeWalkInterpreter) VisitExpressionStmt(exprStatement ast.ExpressionStmt) any {
 	i.evaluate(exprStatement.Expression)
+	return nil
+}
+
+// VisitIfStmt evaluates the condition of the given ast.IfStmt.
+// If the condition evaluates to true (according to interpreter semantics),
+// it executes the 'Then' branch.
+// If an 'Else' branch is present, it is executed if the condition is false.
+
+// Returns:
+//   - any: always nil because statements do not produce values.
+func (i *TreeWalkInterpreter) VisitIfStmt(stmt ast.IfStmt) any {
+	if i.isTrue(i.evaluate(stmt.Condition)) {
+		i.executeStmt(stmt.Then)
+	}
+	if stmt.Else != nil {
+		i.executeStmt(stmt.Else)
+	}
+
 	return nil
 }
 
@@ -264,6 +291,20 @@ func (i *TreeWalkInterpreter) VisitUnary(unary ast.Unary) any {
 		error := CreateRuntimeError(unary.Operator.Line, unary.Operator.Column, message)
 		panic(error)
 	}
+}
+
+// isTrue determines the "truthiness" of the given object according to interpreter rules.
+// It returns false if the object is nil. If the object is explicitly a bool,
+// it returns the boolean value. All other non-nil values are treated as true.
+func (i *TreeWalkInterpreter) isTrue(object any) bool {
+	if object == nil {
+		return false
+	}
+	value, isBool := object.(bool)
+	if isBool {
+		return value
+	}
+	return true
 }
 
 // Retrieves the value for variable.
