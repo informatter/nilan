@@ -46,3 +46,16 @@ type BlockStmt struct {
 func (blockStmt BlockStmt) Accept(v StmtVisitor) any {
 	return v.VisitBlockStmt(blockStmt)
 }
+
+// IfStmt represents an if statement containing the expression
+// to evaluate the statement to execute if the expression is true
+// or the statement to execute of the expression is false.
+type IfStmt struct {
+	Condition Expression
+	Then      Stmt
+	Else      Stmt
+}
+
+func (stmt IfStmt) Accept(v StmtVisitor) any {
+	return v.VisitIfStmt(stmt)
+}
