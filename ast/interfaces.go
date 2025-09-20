@@ -48,6 +48,8 @@ type StmtVisitor interface {
 	// VisitBlockStmt is called when visiting a block statement.
 	VisitBlockStmt(blockStmt BlockStmt) any
 
+	VisitIfStmt(stmt IfStmt) any
+
 	// TODO: Add further visit methods as new statement grammar rules are introduced.
 }
 
