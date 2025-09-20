@@ -82,15 +82,15 @@ func (i *TreeWalkInterpreter) VisitExpressionStmt(exprStatement ast.ExpressionSt
 // VisitIfStmt evaluates the condition of the given ast.IfStmt.
 // If the condition evaluates to true (according to interpreter semantics),
 // it executes the 'Then' branch.
-// If an 'Else' branch is present, it is executed if the condition is false.
+// If an 'Else' branch is present and if the condition is false, it
+// is executed.
 
 // Returns:
 //   - any: always nil because statements do not produce values.
 func (i *TreeWalkInterpreter) VisitIfStmt(stmt ast.IfStmt) any {
 	if i.isTrue(i.evaluate(stmt.Condition)) {
 		i.executeStmt(stmt.Then)
-	}
-	if stmt.Else != nil {
+	} else if stmt.Else != nil {
 		i.executeStmt(stmt.Else)
 	}
 
