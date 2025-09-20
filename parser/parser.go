@@ -245,8 +245,8 @@ func (parser *Parser) variableDeclaration() (ast.Stmt, error) {
 }
 
 // statement parses a single statement. Currently, this can be either
-// a print statement ("print <expr>") an expression statement or
-// a block statement.
+// a print statement ("print <expr>") an expression statement,
+// a block statement or a conditional statement.
 //
 // Returns:
 //   - Stmt: the parsed statement node.
@@ -268,6 +268,10 @@ func (parser *Parser) statement() (ast.Stmt, error) {
 		}
 		return ast.BlockStmt{Statements: statements}, nil
 	}
+
+	if parser.isMatch([]token.TokenType{token.IF}) {
+		return parser.ifStatement()
+	}
 	// TODO: Add more expression types.
 	exprStatement, err := parser.expressionStatement()
 	if err != nil {
@@ -287,6 +291,39 @@ func (parser *Parser) printStatement() (ast.Stmt, error) {
 		return nil, err
 	}
 	return ast.PrintStmt{Expression: expression}, nil
+}
+
+// ifStatement parses an if-statement from the token stream.
+// It expects a condition expression followed by a 'then' branch,
+// and optionally parses an 'else' branch if present.
+// Returns:
+//   - ast.IfStmt: an IfStmt AST node.
+//   - error: if any part fails to parse.
+func (parser *Parser) ifStatement() (ast.Stmt, error) {
+
+	conditionExpr, err := parser.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	thenStmt, err := parser.statement()
+	if err != nil {
+		return nil, err
+	}
+	var elseStmt ast.Stmt = nil
+	if parser.isMatch([]token.TokenType{token.ELSE}) {
+		stmt, err := parser.statement()
+		if err != nil {
+			return nil, err
+		}
+		elseStmt = stmt
+	}
+
+	return ast.IfStmt{
+		Condition: conditionExpr,
+		Then:      thenStmt,
+		Else:      elseStmt,
+	}, nil
 }
 
 // expressionStatement parses a statement consisting of a single expression.
