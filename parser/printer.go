@@ -14,7 +14,6 @@ func (p astPrinter) VisitExpressionStmt(exprStmt ast.ExpressionStmt) any {
 }
 
 func (p astPrinter) VisitPrintStmt(printStmt ast.PrintStmt) any {
-
 	return p.parenthesize("print", printStmt.Expression)
 }
 
@@ -23,8 +22,26 @@ func (p astPrinter) VisitVarStmt(varStmt ast.VarStmt) any {
 }
 
 func (p astPrinter) VisitBlockStmt(blockStmt ast.BlockStmt) any {
-	// TODO: Implement
-	return nil
+	stmts := ""
+	for _, stmt := range blockStmt.Statements {
+		stmts += " " + stmt.Accept(p).(string)
+	}
+	return "(block" + stmts + ")"
+}
+
+func (p astPrinter) VisitIfStmt(stmt ast.IfStmt) any {
+	conditionStr := stmt.Condition.Accept(p).(string)
+	thenStr := stmt.Then.Accept(p).(string)
+
+	var elseStr string
+	if stmt.Else == nil {
+		elseStr = "null"
+	} else {
+		elseStr = stmt.Else.Accept(p).(string)
+		elseStr = "else" + elseStr
+	}
+
+	return fmt.Sprintf("(if %s %s %s)", conditionStr, thenStr, elseStr)
 }
 
 func (p astPrinter) VisitAssignExpression(assign ast.Assign) any {
