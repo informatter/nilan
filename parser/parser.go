@@ -182,9 +182,6 @@ func (parser *Parser) Parse() ([]ast.Stmt, []error) {
 		statements = append(statements, statement)
 	}
 
-	for _, err := range errors {
-		fmt.Println(err.Error())
-	}
 	return statements, errors
 }
 
@@ -206,23 +203,12 @@ func (parser *Parser) declaration() (ast.Stmt, error) {
 	return parser.statement()
 }
 
-// variableDeclaration parses and creates a variable declaration statement.
-//
-// It expects the next token to be an identifier representing the variable's name.
-// If the token is not an identifier, it returns an error indicating the expected variable name.
-//
-// After successfully consuming the identifier, it optionally parses an initializer expression
-// if an assignment operator (=) is found. If an initializer is present, it is parsed as an expression.
-//
-// It returns a VarStmt representing the variable declaration with the variable name and optional initialiser
-// expression, or an error if parsing fails at any point.
-//
+// variableDeclaration parses a variable declaration statement.
+// It expects an identifier token for the variable name
+// followed by an '=' and an initializer expression.
 // Returns:
-//   - VarStmt: The variable declaration statement AST node.
-//
-// Example input:
-//
-//	>>> var x = 10
+//   - ast.VarStmt: A VarStmt AST node epresenting the variable declaration.
+//   - error: A SyntaxError if parsing fails or if the variable has not been initialised.
 func (parser *Parser) variableDeclaration() (ast.Stmt, error) {
 	tok, consumeError := parser.consume(token.IDENTIFIER, "Expected variable name")
 	if consumeError != nil {
@@ -236,6 +222,10 @@ func (parser *Parser) variableDeclaration() (ast.Stmt, error) {
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		errMsg := fmt.Sprintf("The variable '%s' can't be unassigned", tok.Lexeme)
+		err := CreateSyntaxError(tok.Line, tok.Column, errMsg)
+		return nil, err
 	}
 
 	return ast.VarStmt{
@@ -273,11 +263,14 @@ func (parser *Parser) statement() (ast.Stmt, error) {
 		return parser.ifStatement()
 	}
 	// TODO: Add more expression types.
-	exprStatement, err := parser.expressionStatement()
+
+	expression, err := parser.expression()
 	if err != nil {
 		return nil, err
 	}
-	return exprStatement, nil
+	exprStmt := ast.ExpressionStmt{Expression: expression}
+
+	return exprStmt, nil
 }
 
 // printStatement parses a print statement of the form "print <expression>".
@@ -389,7 +382,7 @@ func (parser *Parser) block() ([]ast.Stmt, error) {
 // Input:  x = 10
 // AST:    Assign{Name: x, Value: Literal(10)}
 func (parser *Parser) assignment() (ast.Expression, error) {
-	expression, err := parser.equality()
+	expression, err := parser.or()
 	if err != nil {
 		return nil, err
 	}
@@ -413,8 +406,65 @@ func (parser *Parser) assignment() (ast.Expression, error) {
 	return expression, nil
 }
 
+// or parses a logical OR expression from the token stream.
+// It first parses an AND expression on the left side, then consumes
+// any sequence of OR operators, building a left-associative AST of logical expressions.
+// Returns:
+//   - ast.Expression: The constructed ast.Expression node
+//   - error: An error if parsing fails.
+func (parser *Parser) or() (ast.Expression, error) {
+	expr, err := parser.and()
+	if err != nil {
+		return nil, err
+	}
+
+	for parser.isMatch([]token.TokenType{token.OR}) {
+		op := parser.previous()
+		rightExpr, err := parser.and()
+		if err != nil {
+			return nil, err
+		}
+		expr = ast.Logical{
+			Left:     expr,
+			Operator: op,
+			Right:    rightExpr,
+		}
+	}
+
+	return expr, nil
+}
+
+// and parses a logical AND expression from the token stream.
+// It first parses an equality expression on the left side,
+// then consumes any sequence of AND operators, building a left-associative
+// abstract syntax tree (AST) of logical expressions.
+// Returns:
+//   - ast.Expression: The constructed ast.Expression node
+//   - error: An error if parsing fails.
+func (parser *Parser) and() (ast.Expression, error) {
+	expr, err := parser.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	for parser.isMatch([]token.TokenType{token.AND}) {
+		op := parser.previous()
+		rightExpr, err := parser.equality()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = ast.Logical{
+			Left:     expr,
+			Operator: op,
+			Right:    rightExpr,
+		}
+	}
+	return expr, nil
+}
+
 // expression is the entry point for parsing expressions. It begins at
-// the equality rule, which encompasses all lower-precedence rules.
+// the assignment rule, which encompasses all lower-precedence rules.
 //
 // Returns:
 //   - Expression: the parsed expression AST node.
