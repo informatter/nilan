@@ -38,10 +38,13 @@ func (p astPrinter) VisitIfStmt(stmt ast.IfStmt) any {
 		elseStr = "null"
 	} else {
 		elseStr = stmt.Else.Accept(p).(string)
-		elseStr = "else" + elseStr
 	}
 
-	return fmt.Sprintf("(if %s %s %s)", conditionStr, thenStr, elseStr)
+	return fmt.Sprintf("(if %s %s else %s)", conditionStr, thenStr, elseStr)
+}
+
+func (p astPrinter) VisitLogicalExpression(expr ast.Logical) any {
+	return p.parenthesize(expr.Operator.Lexeme, expr.Left, expr.Right)
 }
 
 func (p astPrinter) VisitAssignExpression(assign ast.Assign) any {
