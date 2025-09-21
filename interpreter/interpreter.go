@@ -338,6 +338,27 @@ func (i *TreeWalkInterpreter) VisitLiteral(literal ast.Literal) any {
 	return literal.Value
 }
 
+// VisitLogicalExpression evaluates a logical expression (AND/OR).
+// It first evaluates the left operand. For OR, if left is true, it returns left immediately (short-circuit).
+// For AND, if left is false, it returns left immediately (short-circuit).
+// Otherwise, it evaluates and returns the right operand.
+func (i *TreeWalkInterpreter) VisitLogicalExpression(logical ast.Logical) any {
+
+	left := i.evaluate(logical.Left)
+
+	if logical.Operator.TokenType == token.OR {
+		if i.isTrue(left) {
+			return left
+		}
+	} else {
+		if !i.isTrue(left) {
+			return left
+		}
+	}
+	return i.evaluate(logical.Right)
+
+}
+
 // VisitGrouping evaluates a Grouping expression by evaluating its inner expression.
 //
 // Parameters:
