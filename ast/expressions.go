@@ -82,3 +82,22 @@ type Assign struct {
 func (assign Assign) Accept(v ExpressionVisitor) any {
 	return v.VisitAssignExpression(assign)
 }
+
+// Logical represents a logical expression in the abstract syntax tree (AST).
+// It models the logical `if`, `else` expressions.
+//
+// Fields:
+//   - Left: The left side expression.
+//   - Operator: The operator being represented, currently it can be either `or` or `and`.
+//   - Right: The right side expression, for example.
+// Example:
+// >>> `if a<b or b>10 and b!=0`
+type Logical struct{
+	Left     Expression
+	Operator token.Token 
+	Right    Expression 
+}
+
+func (logical Logical) Accept(v ExpressionVisitor) any {
+	return v.VisitLogicalExpression(logical)
+}
