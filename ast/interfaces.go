@@ -26,6 +26,8 @@ type ExpressionVisitor interface {
 
 	VisitAssignExpression(assign Assign) any
 
+	VisitLogicalExpression(logical Logical) any
+
 	// TODO: Add further Visit methods as new expression grammar rules are introduced.
 }
 
