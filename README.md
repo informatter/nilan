@@ -7,11 +7,21 @@ My goal is to learn more about how programming languages work under the hood and
 
 ## Features
 
-✅ Write the press release
-
 ✅ Arithmetic expressions: `+`, `-`, `*`, `/`
 
+✅ Lexical scope
+
+✅ Block scope: `{}`
+
 ✅ Comparison operators: `>`, `>=`, `<`, `<=`, `==`, `!=`
+
+✅ Boolean literals: `true`, `false`
+
+✅ String literals: `"hellow world"`
+
+✅ Control flow: `if`, `else`
+
+✅ Logical operators: `and`, `or`
 
 ✅ Boolean literals: `true`, `false`
 
@@ -21,69 +31,83 @@ My goal is to learn more about how programming languages work under the hood and
 
 ✅ Variable identifiers and names
 
-✅ Assignment statements (e.g., `a = 2`)
+✅ Assignment statements (e.g., `var a = 2`)
 
 ✅ Unary operations: logical not `!`, negation `-`
 
 ✅ REPL (Read-Eval-Print Loop) for interactive testing
 
-
+✅ Execute source code from a file.
 
 ## Limitations
 
-Currently, Nilan supports only very primitive expressions and literals. The following are **not supported** yet:
-
-
-
-🔴 String literals and operations
+The following are **not supported** yet:
 
 🔴 Functions and function calls
 
+🔴 Classes, structs, interfaces
+
+🔴 Inheritance
+
 🔴 Arrays or other complex data structures
 
-🔴 Control flow constructs (e.g., `if`, loops)
+🔴 Control flow: loops, `else if`, `break`
+
+🔴 Logical operators: `not`
 
 🔴 Exponentiation or other advanced operators
 
 🔴 Tree-Walk interpreter
 
+🔴 Complex features such as Module/package imports, etc ...
 
-## Quick Start
+## Short term TODOs
 
-To start a REPL and try out Nilan expressions:
+- While loop
+- For loop
+- Functions
 
-```bash
-go run .
-```
+## Current Syntactic Grammar (ISO EBNF)
 
-Start typing Nilan expressions in the interactive prompt.
-
-## Current Grammar (ISO EBNF)
-
-Nilan’s grammar is defined using **ISO Extended Backus–Naur Form (ISO EBNF)**, conforming to [ISO/IEC 14977](https://www.iso.org/standard/26153.html).
+Nilan’s syntactic grammar is defined using **ISO Extended Backus–Naur Form (ISO EBNF)**, conforming to [ISO/IEC 14977](https://www.iso.org/standard/26153.html). It represents the rules used to parse a sequence of tokens into an Abstract Syntax Tree (AST)
 
 ```ebnf
-program = statement, EOF ;
+program = { declaration }, EOF ;
 
-statement = expression | printStmt ;
+declaration = variable-declaration | statement ;
 
-expression = assignment ;
+variable-declaration = identifier , "=" , expression ;
 
-assignment = IDENTIFIER, "=", assignment
-           | equality ;
+statement = expression
+          | if-statement
+          | print-statement
+          | block-statement ;
 
-equality = comparison, { ("!=", "=="), comparison } ;
+if-statement = "if" , expression , statement , [ "else" , statement ] ;
 
-comparison = term, { (">" | ">=" | "<" | "<="), term } ;
+block-statement  = "{" , { declaration } , "}" ;
 
-term = factor, { ("+" | "-"), factor } ;
+expression = assignment-expression ;
 
-factor = unary, { ("*" | "/"), unary } ;
+assignment-expression = IDENTIFIER, "=", assignment-expression
+           | or-expression ;
 
-unary = ("!" | "-"), unary
-      | primary ;
+or-expression  = and-expression , { "or" , and-expression } ;
 
-primary = FLOAT 
+and-expression = equality-expression, { "and", equality-expression } ;
+
+equality-expression = comparison-expression, { ("!=", "=="), comparison-expression } ;
+
+comparison-expression = term-expression, { (">" | ">=" | "<" | "<="), term-expression } ;
+
+term-expression = factor-expression, { ("+" | "-"), factor-expression } ;
+
+factor-expression = unary-expression, { ("*" | "/"), unary-expression } ;
+
+unary-expression = ("!" | "-"), unary-expression
+      | primary-expression ;
+
+primary-expression = FLOAT 
         | INT 
         | IDENTIFIER 
         | "true" 
@@ -92,8 +116,6 @@ primary = FLOAT
         | "(", expression, ")" ;
 
 ```
-
-> 💡 Currently, the grammar and parser support only basic constructs such as logical, arithmetic, unary operations, literals, and parenthesized expressions.
 
 This grammar is not left-recursive because none of the non-terminals start their production with themselves on the left side. Each rule begins with a different non-terminal or terminal before any recursion happens. For example, `equality` starts with `comparison`,`comparison` starts with `term`, etc...
 
@@ -129,22 +151,23 @@ nonterminal = definition ;
 | `|` | Alternatives | `a | b` means either `a` or `b` |
 | `{ ... }` | Zero or more repetitions | `{ a }` means repeat `a` zero or more times |
 | `( ... )` | Grouping | Used to group alternatives or sequences |
+| `[ ... ]` | Optional | Used to speficy optional implementation, for example an `else` clause |
 
 ### Example Rule – Breakdown
 
 Example rule:
 
 ```ebnf
-term = factor , { ( '+' | '-' ) , factor } ;
+term-expression = factor-expression , { ( '+' | '-' ) , factor-expression } ;
 ```
 
 Means:
 
-- A `term` consists of:
-    - A `factor`, followed by
+- A `term-expression` consists of:
+    - A `factor-expression`, followed by
     - Zero or more repetitions of:
         - Either `'+'` or `'-'`, and
-        - Another `factor`
+        - Another `factor-expression`
 
 
 #### Example Matches:
@@ -173,7 +196,7 @@ Precedence from lowest to highest is encoded in the grammar structure itself:
 
 ### Some Examples
 
-#### `term`
+#### `term-expression`
 
 Handles addition and subtraction:
 
@@ -188,7 +211,7 @@ Example:
 ```
 
 
-#### `factor`
+#### `factor-expression`
 
 Handles multiplication and division:
 
@@ -203,7 +226,7 @@ Example:
 ```
 
 
-#### `unary`
+#### `unary-expression`
 
 Handles unary operations like logical not and negation, with recursive chaining:
 
@@ -219,7 +242,7 @@ Examples:
 ```
 
 
-#### `primary`
+#### `primary-expression`
 
 Handles literals and parenthesized expressions:
 
@@ -286,36 +309,68 @@ Binary(
 These examples will **not parse** correctly with the current grammar:
 
 ```text
-foo + 3       # Variables/identifiers not supported yet
-"abc" + "def" # String literals not supported
-2 ** 3        # Exponentiation operator not supported
-1 +           # Trailing operator causes parse error
+1 +
+2++
+2--
+2+=
+2-=
+2**2
 ```
 
 
 ## Extending Nilan
 
-For example, too add new features like variables or function calls:
 
-1. **Update the Lexer**
-Add recognition of new token types such as identifiers.
-2. **Extend the Grammar**
-For variables, extend the grammar to include an `IDENTIFIER` token in `primary`:
+1. **Update the Lexer (optional)**
+If new token types need to be introduced, `token.go` and `lexer.go` need to be modified. 
 
-```ebnf
-primary = 'IDENTIFIER' | ( 'FLOAT' | 'INT' | 'true' | 'false' | 'null' ) | '(' , expression , ')' ;
-```
+2. **Extend the `ExpressionVisitor` or `StmtVisitor` interfaces
+Depending on the type of new syntax introduced, make sure to add the corresponding visit method to one of the interfaces.
 
-3. **Implement Semantics**
-TODO: Add section when interpreter is implemented
+3. **Add a new AST node to `expressions.go` or `statements.go`
+Depending on the type of new syntax introduced, make sure to add the corresponding AST node `struct` to `expressions.go` or `statements.go` depending if its an expression or statement node.
 
-## Development
+4. **Extend the Parser**
+Extend the Parser to handle the new syntax grammar by adding a method which creates an AST node.
 
-### Running the REPL
+5. **Extend the Interpreter**
+Extend the interpreter to execute the the new AST node returned by the parser. This will involve implementing the method added to the `ExpressionVisitor` or `StmtVisitor` interfaces
+
+
+## Installation
 
 ```bash
-go run .
+git clone https://github.com/informatter/nilan.git
+cd nilan
+go install .
 ```
+
+## Usage
+
+Once installed there are two main commands than can be used:
+
+**1. REPL**
+
+Start a REPL session
+```bash
+nilan repl
+```
+
+**2. Run**
+
+Compiles the specified file and executes it directly
+```bash
+nilan run hellow_world.ni
+```
+
+💡If changes are made to the code, run `go install .` once again so a new binary is created with the new changes.
+
+For iterative development is recommended to simply run:
+
+`go run . -- repl` **or** `go run . -- run <file-name>`
+
+for a more efficient workflow.
+
 
 
 ### Testing
