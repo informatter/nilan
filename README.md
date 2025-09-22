@@ -81,9 +81,14 @@ variable-declaration = identifier , "=" , expression ;
 statement = expression
           | if-statement
           | print-statement
+          | while-statement
           | block-statement ;
 
 if-statement = "if" , expression , statement , [ "else" , statement ] ;
+
+print-statement = "print" , expression ;
+
+while-statement = "while", expression, statement ;
 
 block-statement  = "{" , { declaration } , "}" ;
 
