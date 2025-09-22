@@ -127,6 +127,22 @@ func (i *TreeWalkInterpreter) VisitVarStmt(varStmt ast.VarStmt) any {
 	return nil
 }
 
+// VisitWhileStmt interprets a while loop statement.
+// It repeatedly evaluates the loop's condition expression,
+// and as long as the condition evaluates to true,
+// it executes the loop body statement.
+// Returns:
+//	- nil: The method returns nil. An AST statement node does not 
+//    produce a value.
+func (i *TreeWalkInterpreter) VisitWhileStmt(stmt ast.WhileStmt) any{
+
+	for i.isTrue(i.evaluate(stmt.Condition)){
+		i.executeStmt(stmt.Body)
+	}
+
+	return nil
+}
+
 // VisitAssignExpression evaluates an assignment expression node and updates
 // the value of the corresponding variable in the environment.
 //
@@ -388,6 +404,9 @@ func (i *TreeWalkInterpreter) evaluate(expression ast.Expression) any {
 //   - float64: the converted numeric value.
 //   - error: on failure to convert value to float64.
 func literalToFloat64(value any) (float64, error) {
+
+	// TODO: I cant simply always cast ints to floats,
+	// I need to preserve ints ans ints and floats as floats.
 	switch v := value.(type) {
 	case float64:
 		return v, nil
