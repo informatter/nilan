@@ -52,7 +52,7 @@ type StmtVisitor interface {
 
 	VisitIfStmt(stmt IfStmt) any
 
-	VisitWhileStmt (stmt WhileStmt) any
+	VisitWhileStmt(stmt WhileStmt) any
 
 	// TODO: Add further visit methods as new statement grammar rules are introduced.
 }
