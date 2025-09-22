@@ -262,6 +262,10 @@ func (parser *Parser) statement() (ast.Stmt, error) {
 	if parser.isMatch([]token.TokenType{token.IF}) {
 		return parser.ifStatement()
 	}
+
+	if parser.isMatch([]token.TokenType{token.WHILE}) {
+		return parser.WhileStatement()
+	}
 	// TODO: Add more expression types.
 
 	expression, err := parser.expression()
@@ -284,6 +288,33 @@ func (parser *Parser) printStatement() (ast.Stmt, error) {
 		return nil, err
 	}
 	return ast.PrintStmt{Expression: expression}, nil
+}
+
+// WhileStatement parses a while loop statement from the token stream.
+// It parses a condition expression followed by a statement representing
+// the loop body.
+// Returns:
+//   - ast.WhileStmt with the parsed condition and body.
+//   - error: if parsing the condition or body fails.
+func (parser *Parser) WhileStatement() (ast.Stmt, error) {
+
+	expr, err := parser.expression()
+	if err != nil {
+		return nil, err
+	}
+
+	// NOTE: the statement contains the ast node encompassing all
+	// the loops body.
+	stmt, error := parser.statement()
+	if error != nil {
+		return nil, error
+	}
+
+	return ast.WhileStmt{
+		Condition: expr,
+		Body:      stmt,
+	}, nil
+
 }
 
 // ifStatement parses an if-statement from the token stream.
@@ -356,6 +387,16 @@ func (parser *Parser) block() ([]ast.Stmt, error) {
 		return nil, err
 	}
 	return statements, nil
+}
+
+// expression is the entry point for parsing expressions. It begins at
+// the assignment rule, which encompasses all lower-precedence rules.
+//
+// Returns:
+//   - Expression: the parsed expression AST node.
+//   - error: if parsing fails.
+func (parser *Parser) expression() (ast.Expression, error) {
+	return parser.assignment()
 }
 
 // assignment parses an assignment expression from the token stream.
@@ -461,16 +502,6 @@ func (parser *Parser) and() (ast.Expression, error) {
 		}
 	}
 	return expr, nil
-}
-
-// expression is the entry point for parsing expressions. It begins at
-// the assignment rule, which encompasses all lower-precedence rules.
-//
-// Returns:
-//   - Expression: the parsed expression AST node.
-//   - error: if parsing fails.
-func (parser *Parser) expression() (ast.Expression, error) {
-	return parser.assignment()
 }
 
 // equality parses equality expressions using operators "==" and "!=".
