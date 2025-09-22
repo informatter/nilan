@@ -132,11 +132,11 @@ func (i *TreeWalkInterpreter) VisitVarStmt(varStmt ast.VarStmt) any {
 // and as long as the condition evaluates to true,
 // it executes the loop body statement.
 // Returns:
-//	- nil: The method returns nil. An AST statement node does not 
-//    produce a value.
-func (i *TreeWalkInterpreter) VisitWhileStmt(stmt ast.WhileStmt) any{
+//   - nil: The method returns nil. An AST statement node does not
+//     produce a value.
+func (i *TreeWalkInterpreter) VisitWhileStmt(stmt ast.WhileStmt) any {
 
-	for i.isTrue(i.evaluate(stmt.Condition)){
+	for i.isTrue(i.evaluate(stmt.Condition)) {
 		i.executeStmt(stmt.Body)
 	}
 
