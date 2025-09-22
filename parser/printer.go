@@ -29,6 +29,14 @@ func (p astPrinter) VisitBlockStmt(blockStmt ast.BlockStmt) any {
 	return "(block" + stmts + ")"
 }
 
+func (p astPrinter) VisitWhileStmt(stmt ast.WhileStmt) any {
+
+	conditionStr := stmt.Condition.Accept(p).(string)
+	bodyStr := stmt.Body.Accept(p).(string)
+
+	return fmt.Sprintf("(while %s %s)", conditionStr, bodyStr)
+}
+
 func (p astPrinter) VisitIfStmt(stmt ast.IfStmt) any {
 	conditionStr := stmt.Condition.Accept(p).(string)
 	thenStr := stmt.Then.Accept(p).(string)
