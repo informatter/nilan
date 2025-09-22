@@ -59,3 +59,20 @@ type IfStmt struct {
 func (stmt IfStmt) Accept(v StmtVisitor) any {
 	return v.VisitIfStmt(stmt)
 }
+
+// WhileStmt represents a while loop AST node.
+//
+// Fields:
+//   - Condition: The expression evaluated before each iteration of the loop.
+//		If this expression evaluates to true, the loop body executes;
+//      otherwise, the loop terminates.
+//   - Body: The block statement representing the loop body,
+type WhileStmt struct {
+	Condition Expression
+	Body Stmt
+}
+
+func (stmt WhileStmt) Accept(v StmtVisitor) any {
+	return v.VisitWhileStmt(stmt)
+}
+
