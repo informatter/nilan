@@ -69,10 +69,9 @@ func (stmt IfStmt) Accept(v StmtVisitor) any {
 //   - Body: The block statement representing the loop body,
 type WhileStmt struct {
 	Condition Expression
-	Body Stmt
+	Body      Stmt
 }
 
 func (stmt WhileStmt) Accept(v StmtVisitor) any {
 	return v.VisitWhileStmt(stmt)
 }
-
