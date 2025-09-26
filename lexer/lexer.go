@@ -10,36 +10,47 @@ const (
 	COMMENT_CHAR = '#'
 )
 
+func isLetter(char rune) bool {
+	return rune('a') <= char && char <= rune('z') || rune('A') <= char && char <= rune('Z') || char == rune('_')
+}
+
+func isNumber(char rune) bool {
+	return rune('0') <= char && char <= rune('9')
+}
+
+// Lexer represents a lexical scanner for processing input text into tokens.
+// It maintains the current scanning state, including the position within the
+// input, the current character, and metadata for line/column tracking.
+// The Lexer also records tokens and errors encountered during scanning.
 type Lexer struct {
-	Input        string
-	tokens       []token.Token
-	position     int
+	// rune slice of the input string being scanned.
+	characters []rune
+
+	// Total number of runes in the input.
+	totalChars int
+
+	// Stores the sequence of tokens produced during lexing.
+	tokens []token.Token
+
+	// The index of the character that was previously read
+	position int
+
+	// The current character being examined.
+	currentChar rune
+
+	// The index of the next position where the next character
+	// will be read
 	readPosition int
-	lineCount    int32
-	column       int
-}
 
-func isLetter(char byte) bool {
-	return 'a' <= char && char <= 'z' || 'A' <= char && char <= 'Z' || char == '_'
-}
+	// Tracks the number of lines processed (incremented on newline).
+	lineCount int32
 
-func isNumber(char byte) bool {
-	return '0' <= char && char <= '9'
-}
+	// Tracks the character's position within the current line.
+	// Gets reset on every new line back to 0
+	column int
 
-func convertToInt(s string) (int, error) {
-	num, err := strconv.Atoi(s)
-	if err != nil {
-		return 0, err
-	}
-	return num, nil
-}
-func convertTofloat64(s string) (float64, error) {
-	num, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0, err
-	}
-	return num, nil
+	// Stores any scanning errors that occur during lexing.
+	errors []error
 }
 
 // Initializes and returns a new Lexer instance.
@@ -51,19 +62,26 @@ func convertTofloat64(s string) (float64, error) {
 // Returns:
 //   - *Lexer: A pointer to a newly created Lexer instance.
 func CreateLexer(input string) *Lexer {
-	return &Lexer{
-		Input:        input,
-		lineCount:    0,
-		column:       0,
-		position:     0,
-		readPosition: 0,
+	lexer := &Lexer{
+		characters: []rune(input),
 	}
+	lexer.totalChars = len(lexer.characters)
+	lexer.readChar()
+	return lexer
 }
 
+// Updates the `Lexer`'s reading position forward by one character.
+//
+// Behavior:
+//   - Sets `position` to the current `readPosition“
+//   - Increments `readPosition` by 1, so the lexer is ready to read the next
+//     character on the following call.
+//   - Updates the `column` to match `readPosition`, keeping track of the
+//     character's position within the line.
 func (lexer *Lexer) advance() {
 	lexer.position = lexer.readPosition
-	lexer.column = lexer.readPosition
 	lexer.readPosition++
+	lexer.column = lexer.readPosition
 }
 
 // Determines of the lexer has finished scanning all the source code.
@@ -71,72 +89,77 @@ func (lexer *Lexer) advance() {
 // Returns:
 //   - bool: true if the lexer has finished scanning, false otherwise
 func (lexer *Lexer) isFinished() bool {
-	return lexer.readPosition >= len(lexer.Input)
+	return lexer.readPosition >= lexer.totalChars
 }
 
-// Gets the character at the lexer's current position
-//
-// Returns:
-//   - byte: The character at the lexer's current position.
-func (lexer *Lexer) readChar() byte {
+// Reads the character at the `Lexer`'s `readPosition`. If there
+// are no more characters to parse, it sets the `Lexer`'s current
+// character to null.
+func (lexer *Lexer) readChar() {
 
 	if lexer.isFinished() {
-		return 0
+		lexer.currentChar = rune(0)
+	} else {
+		lexer.currentChar = lexer.characters[lexer.readPosition]
 	}
-
-	char := lexer.Input[lexer.readPosition]
 	lexer.advance()
-
-	return char
 }
 
-// Returns the next character in the input without advancing the lexer's position.
+// Reads a sequence of characters from the input until a whitespace
+// character or end-of-file marker (rune(0)) is encountered. This method is
+// typically used to capture tokens or substrings that do not match any valid
+// lexical category (i.e., "illegal" tokens).
 //
-// This method allows the lexer to look ahead at the next character in the input stream
-// without consuming it.
+// Parameters:
+//   - startPos (int): The index in the character slice where the illegal token begins.
 //
 // Returns:
-//   - byte: The next character in the input stream.
-//     If the lexer has reached the end of the input, it returns 0 (null byte )
-func (lexer *Lexer) peek() byte {
-	if lexer.isFinished() {
-		return 0
+//   - string: The substring of characters between startPos (inclusive) and the
+//     current read position, representing the
+//     illegal token.
+func (lexer *Lexer) readIllegal(startPos int) string {
+	for !lexer.isWhiteSpace(lexer.currentChar) && !lexer.isFinished() {
+		lexer.readChar()
 	}
-	return lexer.Input[lexer.readPosition]
+	// return string(lexer.characters[startPos:lexer.readPosition -1])
+	return string(lexer.characters[startPos:lexer.readPosition])
+
 }
 
-func (lexer *Lexer) peekNext() byte {
-	if lexer.readPosition+1 >= len(lexer.Input) {
-		return 0
+// Returns the character at the `Lexer`s `readPosition` without consiming the character
+//
+// Returns:
+//   - rune: The next character in the input stream.
+//     If the lexer has reached the end of the input, it returns 0 (null)
+func (lexer *Lexer) peek() rune {
+	if lexer.isFinished() {
+		return rune(0)
 	}
-	return lexer.Input[lexer.readPosition+1]
+	return lexer.characters[lexer.readPosition]
+}
+
+// Returns the next character from the `Lexer`'s `readPosition` without consiming the character
+// Returns:
+//   - rune: The next character in the input stream.
+//     If the lexer has reached the end of the input, it returns 0 (null)
+func (lexer *Lexer) peekNext() rune {
+	nextReadPos := lexer.readPosition + 1
+	if nextReadPos >= lexer.totalChars {
+		return rune(0)
+	}
+	return lexer.characters[nextReadPos]
 }
 
 // handleComment processes a comment in the input stream.
 //
 // This method is responsible for handling comments in the lexical analysis.
 // It checks if the current character is a comment character and, if so,
-// consumes all characters until the end of the line or end of input.
-//
-// Parameters:
-//   - char: The current character being processed.
-//
-// Returns:
-//   - bool: true if a comment was processed, false otherwise.
-func (lexer *Lexer) handleComment(char byte) bool {
-	if char != COMMENT_CHAR {
-		return false
+// consumes all characters until the end of the line or end of input,
+// while advancing the `Lexer`'s position
+func (lexer *Lexer) handleComment() {
+	for lexer.currentChar != rune('\n') && !lexer.isFinished() {
+		lexer.readChar()
 	}
-
-	for {
-		result := lexer.peek()
-		if result == 0 || result == '\n' {
-			break
-		}
-		lexer.advance()
-	}
-
-	return true
 }
 
 // handleNumber scans a sequence of digits (and at most one decimal point) from
@@ -160,34 +183,40 @@ func (lexer *Lexer) handleNumber() error {
 	decimalCount := 0
 
 	for {
-		result := lexer.peek()
-		if result == 0 || result == '\n' || !isNumber(result) && result != '.' {
+		nextChar := lexer.peek()
+		if nextChar == rune(0) || nextChar == rune('\n') || !isNumber(nextChar) && nextChar != rune('.') {
 			break
 		}
-		if result == '.' {
+		if nextChar == '.' {
 			// handles numbers such as 1.
-			if lexer.peekNext() == 0 {
-				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
+			if lexer.peekNext() == rune(0) {
+				illegalNumber := string(lexer.characters[initPos : lexer.readPosition+1])
+				return fmt.Errorf("invalid number: '%s', line: %v", string(illegalNumber), lexer.lineCount)
 			}
 			// handles numbers such as 1.1.
 			if decimalCount == 1 {
-				return fmt.Errorf("invalid number in line: %v", lexer.lineCount)
+				illegalNumber := lexer.readIllegal(initPos)
+				return fmt.Errorf("invalid number: '%s', line: %v", string(illegalNumber), lexer.lineCount)
+
 			}
+			decimalCount++
+		}
+		// handles numbers such as .2
+		if lexer.currentChar == rune('.') && isNumber(nextChar) {
 			decimalCount++
 		}
 
 		lexer.advance()
 	}
-	substring := lexer.Input[initPos:lexer.readPosition]
+	number := string(lexer.characters[initPos:lexer.readPosition])
 	var tok token.Token
+
 	if decimalCount == 0 {
-		// TODO: Handle if we need to parse to different types of ints.
-		result, _ := strconv.ParseInt(substring, 0, 64)
-		tok = token.CreateLiteralToken(token.INT, result, substring, lexer.lineCount, lexer.column)
+		result, _ := strconv.ParseInt(number, 0, 64)
+		tok = token.CreateLiteralToken(token.INT, result, number, lexer.lineCount, lexer.column)
 	} else {
-		// TODO: Handle if we need to parse to different types of floats.
-		result, _ := strconv.ParseFloat(substring, 64)
-		tok = token.CreateLiteralToken(token.FLOAT, result, substring, lexer.lineCount, lexer.column)
+		result, _ := strconv.ParseFloat(number, 64)
+		tok = token.CreateLiteralToken(token.FLOAT, result, number, lexer.lineCount, lexer.column)
 	}
 	lexer.tokens = append(lexer.tokens, tok)
 
@@ -201,16 +230,16 @@ func (lexer *Lexer) handleIdentifier() {
 	initPos := lexer.position
 	for {
 		result := lexer.peek()
-		if result == 0 || result == '\n' || !isLetter(result) {
+		if result == rune(0) || result == rune('\n') || !isLetter(result) {
 			break
 		}
 		lexer.advance()
 	}
 
-	substring := lexer.Input[initPos:lexer.readPosition]
+	identifier := lexer.characters[initPos:lexer.readPosition]
 	lexeme := token.Token{
 		TokenType: token.IDENTIFIER,
-		Lexeme:    substring,
+		Lexeme:    string(identifier),
 	}
 
 	if keywordType, exists := token.KeyWords[lexeme.Lexeme]; exists {
@@ -243,24 +272,26 @@ func (lexer *Lexer) handleStringLiteral() error {
 	}
 
 	if !isClosed {
-		return fmt.Errorf("unclosed string literal: %s\nline: %v", lexer.Input[initPos+1:lexer.readPosition], lexer.lineCount)
+		return fmt.Errorf("unclosed string literal: '%s', line: %v", string(lexer.characters[initPos+1:lexer.readPosition]), lexer.lineCount)
 	}
-	literalValue := lexer.Input[initPos+1 : lexer.position]
-	//lexeme := lexer.Input[initPos : lexer.position+1] -> includes escape chars which are not needed
-	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(token.STRING, literalValue, literalValue, lexer.lineCount, lexer.column))
+
+	// NOTE: `initPos+1`` and `lexer.position` is to ignore escape characters.
+	// as we dont need to store them for a literal string token
+	// "\"foo\"" -> "foo"
+	stringLiteral := string(lexer.characters[initPos+1 : lexer.position])
+	lexer.tokens = append(lexer.tokens, token.CreateLiteralToken(token.STRING, stringLiteral, stringLiteral, lexer.lineCount, lexer.column))
 	return nil
 }
 
 // Determines if the next character in the source code
 // matches the `expected` character.
-func (lexer *Lexer) isMatch(expected byte) bool {
+func (lexer *Lexer) isMatch(expected rune) bool {
 
-	nextIndex := lexer.readPosition
-	if nextIndex >= len(lexer.Input) {
+	if lexer.isFinished() {
 		return false
 	}
 
-	if lexer.Input[nextIndex] == expected {
+	if lexer.characters[lexer.readPosition] == expected {
 		lexer.readPosition++
 		return true
 	}
@@ -268,12 +299,25 @@ func (lexer *Lexer) isMatch(expected byte) bool {
 
 }
 
-func (lexer *Lexer) isWhiteSpace(char byte) bool {
+// isWhiteSpace determines whether a given rune represents whitespace in the input stream.
+// In Nilan, whitespace is considered to be the following characters:
+//   - carriage return ('\r')
+//   - tab ('\t')
+//   - newline ('\n')
+//   - ASCII space (' ')
+//
+// Parameters:
+//   - char (rune): The character being evaluated.
+//
+// Returns:
+//   - bool: true if the character is considered whitespace, otherwise false.
+func (lexer *Lexer) isWhiteSpace(char rune) bool {
 
-	if char == ' ' || char == '\r' || char == '\t' {
+	if char == rune(' ') || char == rune('\r') || char == rune('\t') {
 		return true
 	}
-	if char == '\n' {
+	if lexer.currentChar == rune('\n') {
+		// increment line count and reset column back to zero
 		lexer.lineCount++
 		lexer.column = 0
 		return true
@@ -281,91 +325,106 @@ func (lexer *Lexer) isWhiteSpace(char byte) bool {
 	return false
 }
 
+// Skips all whitespaces in the input while advancing the `Lexer`'s position
+func (lexer *Lexer) skipWhiteSpace() {
+	for lexer.isWhiteSpace(lexer.currentChar) {
+		lexer.readChar()
+	}
+}
+
 // Processes the current character and creates a token if applicable.
 //
 // This method is responsible for identifying and creating tokens based on the current
 // character in the input stream.
-//
-// Returns:
-//   - error: An error if an unexpected character is encountered, nil otherwise.
-func (lexer *Lexer) scanToken() error {
+func (lexer *Lexer) createToken() {
 
-	char := lexer.readChar()
-	if lexer.isWhiteSpace(char) {
-		return nil
-	}
-	var tok token.Token
-	switch char {
-	case '(':
-		tok = token.CreateToken(token.LPA, lexer.lineCount, lexer.column)
-	case ')':
-		tok = token.CreateToken(token.RPA, lexer.lineCount, lexer.column)
-	case '{':
-		tok = token.CreateToken(token.LCUR, lexer.lineCount, lexer.column)
-	case '}':
-		tok = token.CreateToken(token.RCUR, lexer.lineCount, lexer.column)
-	case ';':
-		tok = token.CreateToken(token.SEMICOLON, lexer.lineCount, lexer.column)
-	case ',':
-		tok = token.CreateToken(token.COMMA, lexer.lineCount, lexer.column)
-	case '*':
-		tok = token.CreateToken(token.MULT, lexer.lineCount, lexer.column)
-	case '+':
-		tok = token.CreateToken(token.ADD, lexer.lineCount, lexer.column)
-	case '-':
-		tok = token.CreateToken(token.SUB, lexer.lineCount, lexer.column)
-	case '/':
-		tok = token.CreateToken(token.DIV, lexer.lineCount, lexer.column)
-	case '=':
-		tok = token.CreateToken(token.ASSIGN, lexer.lineCount, lexer.column)
-		if lexer.isMatch('=') {
+	lexer.skipWhiteSpace()
+
+	switch lexer.currentChar {
+	case rune('('):
+		tok := token.CreateToken(token.LPA, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune(')'):
+		tok := token.CreateToken(token.RPA, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('{'):
+		tok := token.CreateToken(token.LCUR, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('}'):
+		tok := token.CreateToken(token.RCUR, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune(';'):
+		tok := token.CreateToken(token.SEMICOLON, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune(','):
+		tok := token.CreateToken(token.COMMA, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('*'):
+		tok := token.CreateToken(token.MULT, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('+'):
+		tok := token.CreateToken(token.ADD, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('-'):
+		tok := token.CreateToken(token.SUB, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('/'):
+		tok := token.CreateToken(token.DIV, lexer.lineCount, lexer.column)
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('='):
+		tok := token.CreateToken(token.ASSIGN, lexer.lineCount, lexer.column)
+		if lexer.isMatch(rune('=')) {
 			tok = token.CreateToken(token.EQUAL_EQUAL, lexer.lineCount, lexer.column)
 		}
-	case '!':
-		tok = token.CreateToken(token.BANG, lexer.lineCount, lexer.column)
-		if lexer.isMatch('=') {
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('!'):
+		tok := token.CreateToken(token.BANG, lexer.lineCount, lexer.column)
+		if lexer.isMatch(rune('=')) {
 			tok = token.CreateToken(token.NOT_EQUAL, lexer.lineCount, lexer.column)
 		}
-	case '<':
-		tok = token.CreateToken(token.LESS, lexer.lineCount, lexer.column)
-		if lexer.isMatch('=') {
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('<'):
+		tok := token.CreateToken(token.LESS, lexer.lineCount, lexer.column)
+		if lexer.isMatch(rune('=')) {
 			tok = token.CreateToken(token.LESS_EQUAL, lexer.lineCount, lexer.column)
 		}
-	case '>':
-		tok = token.CreateToken(token.LARGER, lexer.lineCount, lexer.column)
-		if lexer.isMatch('=') {
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('>'):
+		tok := token.CreateToken(token.LARGER, lexer.lineCount, lexer.column)
+		if lexer.isMatch(rune('=')) {
 			tok = token.CreateToken(token.LARGER_EQUAL, lexer.lineCount, lexer.column)
 		}
-	case '"':
+		lexer.tokens = append(lexer.tokens, tok)
+	case rune('"'):
 		err := lexer.handleStringLiteral()
 		if err != nil {
-			return err
+
+			lexer.errors = append(lexer.errors, err)
 		}
 
-	case COMMENT_CHAR:
-		if lexer.handleComment(char) {
-			return nil
-		}
+	case rune(COMMENT_CHAR):
+		lexer.handleComment()
 	default:
-		if isLetter(char) {
+		if isLetter(lexer.currentChar) {
 			lexer.handleIdentifier()
-			return nil
-		}
-		if isNumber(char) {
+		} else if isNumber(lexer.currentChar) || lexer.currentChar == rune('.') {
 			err := lexer.handleNumber()
 			if err != nil {
-				return err
+				lexer.errors = append(lexer.errors, err)
 			}
-			return nil
+		} else if !lexer.isFinished() {
+
+			position := lexer.position
+			column := lexer.column
+			currentChar := lexer.currentChar
+			illegal := lexer.readIllegal(position)
+
+			err := fmt.Errorf("unexpected character: '%c' in: '%s', line: %v, column: %v", currentChar, illegal, lexer.lineCount, column)
+			lexer.errors = append(lexer.errors, err)
 		}
-
-		return fmt.Errorf("unexpected character: %c\nline: %v", char, lexer.lineCount)
-	}
-	if tok.Lexeme != "" {
-		lexer.tokens = append(lexer.tokens, tok)
 	}
 
-	return nil
+	lexer.readChar()
 }
 
 // Scan performs lexical analysis on the input and returns a slice of tokens.
@@ -376,13 +435,21 @@ func (lexer *Lexer) scanToken() error {
 //
 // Returns:
 //   - []token.Token: A slice containing all tokens found in the input.
-//   - error: An error if any issues occurred during scanning, or nil if successful.
+//   - error: An error if any issues occurred during lexing, or nil if successful.
 func (lexer *Lexer) Scan() ([]token.Token, error) {
 
-	for !lexer.isFinished() {
-		err := lexer.scanToken()
-		if err != nil {
-			return lexer.tokens, err
+	if lexer.totalChars > 1 {
+		for lexer.currentChar != rune(0) {
+			lexer.createToken()
+			if len(lexer.errors) == 1 {
+				return lexer.tokens, lexer.errors[0]
+			}
+		}
+	} else {
+		// special handling for inputs with a single character or empty inputs.
+		lexer.createToken()
+		if len(lexer.errors) == 1 {
+			return lexer.tokens, lexer.errors[0]
 		}
 	}
 	lexer.tokens = append(lexer.tokens, token.CreateToken(token.EOF, lexer.lineCount, lexer.column))
