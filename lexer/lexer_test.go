@@ -30,7 +30,7 @@ func runTest(expected []token.Token, scanner *Lexer, t *testing.T) {
 	}
 }
 
-func TestScanLoose(t *testing.T) {
+func TestComments(t *testing.T) {
 
 	expected := []token.Token{
 		token.CreateToken(token.LPA, 0, 0),
@@ -81,6 +81,7 @@ func TestScanLoose(t *testing.T) {
 	#my_var = {
 	#}
 	`
+
 	scanner := CreateLexer(test)
 	runTest(expected, scanner, t)
 
@@ -137,19 +138,19 @@ func TestHandleStringLiteralErrors(t *testing.T) {
 			name:    "Unclosed string literal",
 			input:   `var c ="unclosed`,
 			wantErr: true,
-			errMsg:  "unclosed string literal: unclosed\nline: 0",
+			errMsg:  "unclosed string literal: 'unclosed', line: 0",
 		},
 		{
 			name:    "Only opening quote",
 			input:   `"`,
 			wantErr: true,
-			errMsg:  "unclosed string literal: \nline: 0",
+			errMsg:  "unclosed string literal: '', line: 0",
 		},
 		{
 			name:    "String literal at end of input",
 			input:   `hello "world`,
 			wantErr: true,
-			errMsg:  "unclosed string literal: world\nline: 0",
+			errMsg:  "unclosed string literal: 'world', line: 0",
 		},
 	}
 
@@ -169,6 +170,60 @@ func TestHandleStringLiteralErrors(t *testing.T) {
 
 		})
 	}
+}
+
+func TestHandleNumberErrors(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name:    "Malformed decimal number A",
+			input:   `1.11.`,
+			wantErr: true,
+			errMsg:  "invalid number: '1.11.', line: 0",
+		},
+		{
+			name:    "Malformed decimal number A",
+			input:   `0.000.111`,
+			wantErr: true,
+			errMsg:  "invalid number: '0.000.111', line: 0",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scanner := CreateLexer(tt.input)
+
+			_, err := scanner.Scan()
+
+			if err == nil {
+				t.Errorf("handleNumber() error = nil, wantErr %v", tt.wantErr)
+				return
+			}
+			if err.Error() != tt.errMsg {
+				t.Errorf("handleNumber() error = %v, wantErr %v", err, tt.errMsg)
+			}
+
+		})
+	}
+}
+
+func TestHandleNumber(t *testing.T) {
+	expected := []token.Token{
+		token.CreateLiteralToken(token.FLOAT, float64(0.2), ".2", 0, 0),
+		token.CreateLiteralToken(token.FLOAT, float64(0.0001), "0.0001", 0, 0),
+		token.CreateLiteralToken(token.INT, int64(1000), "1000", 0, 0),
+	}
+	test := `
+	.2
+	0.0001
+	1000
+	`
+	scanner := CreateLexer(test)
+	runTest(expected, scanner, t)
 }
 
 func TestScanSourceCode(t *testing.T) {
