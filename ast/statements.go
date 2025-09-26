@@ -64,8 +64,8 @@ func (stmt IfStmt) Accept(v StmtVisitor) any {
 //
 // Fields:
 //   - Condition: The expression evaluated before each iteration of the loop.
-//		If this expression evaluates to true, the loop body executes;
-//      otherwise, the loop terminates.
+//     If this expression evaluates to true, the loop body executes;
+//     otherwise, the loop terminates.
 //   - Body: The block statement representing the loop body,
 type WhileStmt struct {
 	Condition Expression
