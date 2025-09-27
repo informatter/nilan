@@ -62,8 +62,6 @@ The following are **not supported** yet:
 🔴 Complex features such as Module/package imports, etc ...
 
 ## Short term TODOs
-
-- While loop
 - For loop
 - Functions
 
