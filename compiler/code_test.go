@@ -4,20 +4,20 @@ import (
 	"testing"
 )
 
-func TestMakeInstruction(t *testing.T) {
+func TestAssembleInstruction(t *testing.T) {
 
 	tests := []struct {
 		op       Opcode
 		operands []int
 		expected []byte
 	}{
-		//
+		// TODO: add more test cases
 		{OP_CONSTANT, []int{65000}, []byte{byte(OP_CONSTANT), 253, 232}},
 	}
 
 	for _, tt := range tests {
 
-		instruction := MakeInstruction(tt.op, tt.operands...)
+		instruction := AssmebleInstruction(tt.op, tt.operands...)
 		if len(instruction) != len(tt.expected) {
 			t.Errorf("instruction has wrong length - got: %d, want: %d", len(instruction), len(tt.expected))
 		}
@@ -31,4 +31,21 @@ func TestMakeInstruction(t *testing.T) {
 
 	}
 
+}
+
+func TestDiassembleInstruction(t *testing.T   ) {
+	tests := []struct {
+		instruction []byte
+		expected    string
+	}{
+		// TODO: add more test cases
+		{[]byte{byte(OP_CONSTANT), 253, 232}, "opcode: OP_CONSTANT, operand: 65000, operand widths: 2 bytes"},
+	}
+
+	for _, tt := range tests {
+		err := DiassembleInstruction(tt.instruction)
+		if err != nil {
+			t.Errorf(err.Error())
+		}
+	}
 }
