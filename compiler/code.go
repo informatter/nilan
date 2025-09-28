@@ -11,7 +11,7 @@ import (
 //
 // Fields:
 //   - Instructions: An array of instructions defined by opcodes and
-// 	   					their operands
+//     their operands
 //   - ConstantsPool: An array containing all the constant values from the source code.
 type Bytecode struct {
 	Instructions  Instructions
@@ -22,8 +22,11 @@ type Opcode byte
 
 type Instructions []byte
 
+// All opcodes take up 1 byte of memory
+const OPCODE_TOTAL_BYTES int = 1
+
 // opcodes
-//iota generates a distinct byte for each bytecode
+// iota generates a distinct byte for each bytecode
 const (
 	// represents a opcode constant with a single operand with a size of
 	// 2 bytes, which represents a `uint16`.
@@ -76,18 +79,18 @@ func Get(op Opcode) (*OpCodeDefinition, error) {
 //     recognized, an empty slice is returned.
 //
 // Example:
-//   // Suppose OP_CONSTANT expects a 2-byte operand (index into constants table).
-//   instr := MakeBytecode(OP_CONSTANT, 42)
-//   // instr now contains: [<opcode for OP_CONSTANT>, 0x00, 0x2A]
 //
-func MakeInstruction(op Opcode, operands ...int) []byte {
+//	// Suppose OP_CONSTANT expects a 2-byte operand (index into constants table).
+//	instr := MakeBytecode(OP_CONSTANT, 42)
+//	// instr now contains: [<opcode for OP_CONSTANT>, 0x00, 0x2A]
+func AssmebleInstruction(op Opcode, operands ...int) []byte {
 	def, err := Get(op)
 	if err != nil {
 		return []byte{}
 	}
 
-	byteOffset := 1
-	instructionLength := byteOffset // starts at one for the opcode
+	byteOffset := OPCODE_TOTAL_BYTES
+	instructionLength := byteOffset
 	for _, i := range def.OperandWidths {
 		instructionLength += i
 	}
@@ -97,13 +100,46 @@ func MakeInstruction(op Opcode, operands ...int) []byte {
 	// The firt byte of the instruction will be the opcode
 	instruction[0] = byte(op)
 
-	for i, o := range operands {
+	for i, operand := range operands {
 		width := def.OperandWidths[i]
-		switch width {
-		case 2:
-			binary.BigEndian.PutUint16(instruction[byteOffset:], uint16(o))
+		switch op {
+		case OP_CONSTANT:
+			binary.BigEndian.PutUint16(instruction[byteOffset:], uint16(operand))
 		}
 		byteOffset += width
 	}
 	return instruction
+}
+
+// Takes a single bytecode instruction and prints out its
+// decoded representation in a human-readable format.
+//
+// The instruction is expected to be in the format:
+//
+//	[opcode][operands...]
+//
+//   - The first byte of the instruction specifies the opcode.
+//   - The remaining bytes (if any) represent the operands, whose size and meaning
+//     depend on the opcode definition retrieved from Get(opcode).
+//
+// Parameters:
+//   - instruction: The bytecode instruction to decode.
+//
+// Returns:
+//   - An error if the opcode in the `instruction` is not recognised
+func DiassembleInstruction(instruction []byte) error {
+	opcode := Opcode(instruction[0])
+
+	def, err := Get(opcode)
+	if err != nil {
+		return fmt.Errorf("unrecognised opcode")
+	}
+
+	switch opcode {
+	case OP_CONSTANT:
+		operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
+		fmt.Printf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, def.OperandWidths[0])
+	}
+
+	return nil
 }

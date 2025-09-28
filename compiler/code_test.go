@@ -33,7 +33,7 @@ func TestAssembleInstruction(t *testing.T) {
 
 }
 
-func TestDiassembleInstruction(t *testing.T   ) {
+func TestDiassembleInstruction(t *testing.T) {
 	tests := []struct {
 		instruction []byte
 		expected    string
