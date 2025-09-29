@@ -17,7 +17,7 @@ func TestAssembleInstruction(t *testing.T) {
 
 	for _, tt := range tests {
 
-		instruction := AssmebleInstruction(tt.op, tt.operands...)
+		instruction := AssembleInstruction(tt.op, tt.operands...)
 		if len(instruction) != len(tt.expected) {
 			t.Errorf("instruction has wrong length - got: %d, want: %d", len(instruction), len(tt.expected))
 		}

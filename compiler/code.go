@@ -83,7 +83,7 @@ func Get(op Opcode) (*OpCodeDefinition, error) {
 //	// Suppose OP_CONSTANT expects a 2-byte operand (index into constants table).
 //	instr := MakeBytecode(OP_CONSTANT, 42)
 //	// instr now contains: [<opcode for OP_CONSTANT>, 0x00, 0x2A]
-func AssmebleInstruction(op Opcode, operands ...int) []byte {
+func AssembleInstruction(op Opcode, operands ...int) []byte {
 	def, err := Get(op)
 	if err != nil {
 		return []byte{}
@@ -116,11 +116,11 @@ func AssmebleInstruction(op Opcode, operands ...int) []byte {
 //
 // The instruction is expected to be in the format:
 //
-//	[opcode][operands...]
+//		[opcode][operands...]
 //
-//   - The first byte of the instruction specifies the opcode.
-//   - The remaining bytes (if any) represent the operands, whose size and meaning
-//     depend on the opcode definition retrieved from Get(opcode).
+//	  - The first byte of the instruction specifies the opcode.
+//	  - The remaining bytes (if any) represent the operands, whose size and meaning
+//	    depend on the opcode definition retrieved from Get(opcode).
 //
 // Parameters:
 //   - instruction: The bytecode instruction to decode.
