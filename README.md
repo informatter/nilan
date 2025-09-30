@@ -63,9 +63,12 @@ The following are **not supported** yet:
 
 🔴 Complex features such as Module/package imports, etc ...
 
-## Short term TODOs
-- For loop
-- Functions
+## TODOs
+- Implement existing language features in tree-walk interpreter and parser (AST generator) into the compiler and VM 👷 (In progress)
+- Add suppor for `else if`, `break`
+- Add support for functions and function calls.
+- Add support for structs.
+
 
 ## Current Syntactic Grammar (ISO EBNF)
 
@@ -376,6 +379,7 @@ For iterative development is recommended to simply run:
 
 for a more efficient workflow.
 
+💡The two above CLI commands will use the tree-walk interpreter while the compiler and VM are implemented to the same level.
 
 
 ### Testing
