@@ -25,6 +25,9 @@ type Instructions []byte
 // All opcodes take up 1 byte of memory
 const OPCODE_TOTAL_BYTES int = 1
 
+// constant opcode takes up 3 bytes of memory
+const OP_CONSTANT_TOTAL_BYTES = 3
+
 // opcodes
 // iota generates a distinct byte for each bytecode
 const (
@@ -34,6 +37,9 @@ const (
 	// this will restrict a nilan program to have a total of 65535 constants.
 	// NOTE: This is not a hard constraint, could be changed to uint32 if needed
 	OP_CONSTANT Opcode = iota
+
+	// represents an end of file opcode
+	OP_END Opcode = iota
 )
 
 // Represents a definition of an opcode.
@@ -48,6 +54,7 @@ type OpCodeDefinition struct {
 var definitions = map[Opcode]*OpCodeDefinition{
 	// has a single operand which takes two bytes of memory.
 	OP_CONSTANT: {Name: "OP_CONSTANT", OperandWidths: []int{2}},
+	OP_END:      {Name: "OP_END"},
 }
 
 func Get(op Opcode) (*OpCodeDefinition, error) {
@@ -105,6 +112,9 @@ func AssembleInstruction(op Opcode, operands ...int) []byte {
 		switch op {
 		case OP_CONSTANT:
 			binary.BigEndian.PutUint16(instruction[byteOffset:], uint16(operand))
+		case OP_END:
+			return instruction
+
 		}
 		byteOffset += width
 	}
@@ -139,6 +149,9 @@ func DiassembleInstruction(instruction []byte) error {
 	case OP_CONSTANT:
 		operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
 		fmt.Printf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, def.OperandWidths[0])
+
+	case OP_END:
+		fmt.Printf("opcode: %s, operand: %s, operand widths: %d bytes", def.Name, "None", 0)
 	}
 
 	return nil
