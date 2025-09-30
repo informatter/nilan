@@ -29,6 +29,8 @@ func (c *Compiler) Compile(tokens []token.Token) (Bytecode, error) {
 
 		switch tok.TokenType {
 		// TODO: Handle other tokens.
+		case token.EOF:
+			c.emit(OP_END)
 		default:
 			c.handleNumber(tok)
 		}
