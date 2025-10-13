@@ -1,41 +1,207 @@
+// This package contains the parser and compiler for Nilan. A Pratt parser is used to parse expressions,
+// Each token maps to a particular infix and prefix parsing rule with its presedence level.
 package compiler
 
 import (
 	"nilan/token"
 )
 
+// Precedence levels for the grammar's rules, ordered from lowest to highest.
+// Highest rules will be parsed and compiled before lower presedence rules.
+const (
+	PREC_NONE = iota
+	PREC_ASSIGNMENT
+	PREC_TERM   // +,-
+	PREC_FACTOR // /,*
+	PREC_UNARY  // !, -,
+)
+
+var precedence = map[token.TokenType]int{
+	token.ADD:  PREC_TERM,
+	token.SUB:  PREC_TERM,
+	token.DIV:  PREC_FACTOR,
+	token.MULT: PREC_FACTOR,
+	token.BANG: PREC_UNARY,
+}
+
+type ParseFunc func(*Compiler)
+
+// Defines the parsing behavior for a specific token type.
+// It contains optional prefix and infix parsing functions, and the precedence level of the token.
+type parseRule struct {
+	prefix     ParseFunc
+	infix      ParseFunc
+	precedence int
+}
+
+// Executes the appropriate parsing function of the parsing rule against the given Compiler instance.
+// if all parsing rules have a function (infix and prefix) they are executed, otherwise only the available
+// parsing rule is executed.
+func (rule *parseRule) execute(c *Compiler) {
+	if rule.prefix != nil {
+		rule.prefix(c)
+	} else if rule.infix != nil {
+		rule.infix(c)
+	}
+
+}
+
 // Represents the compiler which will compile
 // a stream of `Token`'s to `Bytecode` to be executed
 // by the VM
 type Compiler struct {
-	bytecode Bytecode
+	bytecode     Bytecode
+	readPosition int32
+
+	totalTokens  int32
+	tokens       []token.Token
+	previousTok  token.Token
+	currentTok   token.Token
+	parsingRules map[token.TokenType]parseRule
 }
 
-// Creates `Compiler` instance and returns
+// Creates a `Compiler` instance and returns
 // a pointer to it.
-func NewCompiler() *Compiler {
-	return &Compiler{
+func NewCompiler(tokens []token.Token) *Compiler {
+	c := &Compiler{
 		bytecode: Bytecode{
 			Instructions:  Instructions{},
 			ConstantsPool: []any{},
 		},
+		totalTokens: int32(len(tokens)),
+		tokens:      tokens,
+
+		parsingRules: map[token.TokenType]parseRule{
+			token.ADD:   {prefix: nil, infix: (*Compiler).binary, precedence: PREC_TERM},
+			token.SUB:   {prefix: (*Compiler).unary, infix: (*Compiler).binary, precedence: PREC_TERM},
+			token.DIV:   {prefix: nil, infix: (*Compiler).binary, precedence: PREC_TERM},
+			token.MULT:  {prefix: nil, infix: (*Compiler).binary, precedence: PREC_TERM},
+			token.INT:   {prefix: (*Compiler).number, infix: nil, precedence: PREC_NONE},
+			token.FLOAT: {prefix: (*Compiler).number, infix: nil, precedence: PREC_NONE},
+		},
+	}
+	return c
+}
+
+// Compiles a stream of `Token`s into `Bytecode`
+func (c *Compiler) Compile() (Bytecode, error) {
+
+	c.expression()
+
+	return c.bytecode, nil
+}
+
+// Retrieves the parsing rule associated with the given token type.
+// It returns the parseRule and true if found, otherwise returns an empty parseRule and false.
+func (c *Compiler) getParseRule(tokenType token.TokenType) (parseRule, bool) {
+	rule, ok := c.parsingRules[tokenType]
+	if !ok {
+		return parseRule{}, false
+	}
+
+	return rule, true
+}
+
+// begins parsing an expression from the assignment presedence level
+func (c *Compiler) expression() {
+	c.parsePresedence(PREC_ASSIGNMENT)
+}
+
+// Parses expressions with the provided precedence level.
+// It advances the token stream, applies the parse rule, and continues while
+// the next token precedence is higher or equal.
+func (c *Compiler) parsePresedence(presedence int) {
+	c.advance()
+
+	rule, success := c.getParseRule(c.previousTok.TokenType)
+	if !success {
+		panic("Expected expression")
+	}
+
+	rule.execute(c)
+
+	for presedence <= c.getPresedence(c.currentTok.TokenType) && !c.isFinished() {
+		c.advance()
+		rule, _ := c.getParseRule(c.previousTok.TokenType)
+		rule.execute(c)
 	}
 }
 
-// Compiles an array of `Token`'s into `Bytecode`
-func (c *Compiler) Compile(tokens []token.Token) (Bytecode, error) {
-
-	for _, tok := range tokens {
-
-		switch tok.TokenType {
-		// TODO: Handle other tokens.
-		case token.EOF:
-			c.emit(OP_END)
-		default:
-			c.handleNumber(tok)
-		}
+// Parses and emits code for binary operators (+, -, *, /).
+// It parses the right-hand operand with higher precedence and
+// emits the corresponding bytecode for the operator.
+func (c *Compiler) binary() {
+	tokenType := c.previousTok.TokenType
+	prec := c.getPresedence(tokenType)
+	// +1 because each binary operator's right-hand presedence is one
+	// level higher than its own
+	c.parsePresedence(prec + 1) // compile right hand expression (operand) first
+	switch tokenType {
+	case token.SUB:
+		c.emit(OP_SUBTRACT)
+	case token.ADD:
+		c.emit(OP_ADD)
+	case token.MULT:
+		c.emit(OP_MULTIPLY)
+	case token.DIV:
+		c.emit(OP_DIVIDE)
 	}
-	return c.bytecode, nil
+}
+
+// Parses and emits code for unary operators (!,-).
+// It parses the operand and emits the appropriate bytecode for the unary operation.
+func (c *Compiler) unary() {
+	tokenType := c.previousTok.TokenType
+	c.parsePresedence(PREC_UNARY) // // compile right hand expression (oparand) first
+	switch tokenType {
+	case token.SUB:
+		c.emit(OP_NEGATE)
+	case token.BANG:
+		c.emit(OP_NEGATE)
+	default:
+		return
+
+	}
+}
+
+// parses integer and floating-point literals and emits their
+// bytecode representation
+func (c *Compiler) number() {
+	tokenType := c.previousTok.TokenType
+	switch tokenType {
+	case token.INT:
+		c.handleNumber(c.previousTok)
+	case token.FLOAT:
+		c.handleNumber(c.previousTok)
+	}
+}
+
+// Gets the precedence of the given token type.
+// If the token type has no defined precedence, PREC_NONE is returned.
+func (c *Compiler) getPresedence(tokenType token.TokenType) int {
+	prec, ok := precedence[tokenType]
+	if !ok {
+		return PREC_NONE
+	}
+
+	return prec
+}
+
+// isFinished returns true if the parser has reached the end of token stream (EOF).
+func (c *Compiler) isFinished() bool {
+	return c.currentTok.TokenType == token.EOF
+}
+
+// advance moves the parser to the next token in the input stream.
+// It updates previousTok and currentTok accordingly.
+func (c *Compiler) advance() {
+
+	if c.isFinished() {
+		return
+	}
+	c.previousTok = c.tokens[c.readPosition]
+	c.readPosition++
+	c.currentTok = c.tokens[c.readPosition]
 }
 
 // Processes a numeric token into a bytecode instruction.
