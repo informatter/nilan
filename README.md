@@ -4,7 +4,7 @@
 Nilan is a programming language I am currently developing for fun 🚀, implemented in Go.
 My goal is to learn more about how programming languages work under the hood and to explore the different pipelines involved — from taking source code as input to making the CPU execute instructions 🤖.
 
-ℹ️ At the moment, I have decided to stop working on the tree-walk interpreter and parser. Instead I am starting to develop the compiler and the VM. I will compile the tokens into bytecode and then have a virtual machine which executes the bytecode. The language will no longer have an Abstract Syntax Tree (AST). 
+ℹ️ At the moment, I have decided to stop working on the tree-walk interpreter and parser. Instead I am starting to develop the compiler and the VM. I will compile the tokens into bytecode and then have a virtual machine which executes the bytecode. For the moment, Nilan language will no longer have an Abstract Syntax Tree (AST). 
 
 
 ## Features
