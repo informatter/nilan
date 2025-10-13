@@ -40,6 +40,12 @@ const (
 
 	// represents an end of file opcode
 	OP_END Opcode = iota
+
+	OP_ADD      Opcode = iota
+	OP_MULTIPLY Opcode = iota
+	OP_DIVIDE   Opcode = iota
+	OP_SUBTRACT Opcode = iota
+	OP_NEGATE   Opcode = iota
 )
 
 // Represents a definition of an opcode.
