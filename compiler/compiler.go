@@ -34,18 +34,6 @@ type parseRule struct {
 	precedence int
 }
 
-// Executes the appropriate parsing function of the parsing rule against the given Compiler instance.
-// if all parsing rules have a function (infix and prefix) they are executed, otherwise only the available
-// parsing rule is executed.
-func (rule *parseRule) execute(c *Compiler) {
-	if rule.prefix != nil {
-		rule.prefix(c)
-	} else if rule.infix != nil {
-		rule.infix(c)
-	}
-
-}
-
 // Represents the compiler which will compile
 // a stream of `Token`'s to `Bytecode` to be executed
 // by the VM
@@ -74,8 +62,8 @@ func NewCompiler(tokens []token.Token) *Compiler {
 		parsingRules: map[token.TokenType]parseRule{
 			token.ADD:   {prefix: nil, infix: (*Compiler).binary, precedence: PREC_TERM},
 			token.SUB:   {prefix: (*Compiler).unary, infix: (*Compiler).binary, precedence: PREC_TERM},
-			token.DIV:   {prefix: nil, infix: (*Compiler).binary, precedence: PREC_TERM},
-			token.MULT:  {prefix: nil, infix: (*Compiler).binary, precedence: PREC_TERM},
+			token.DIV:   {prefix: nil, infix: (*Compiler).binary, precedence: PREC_FACTOR},
+			token.MULT:  {prefix: nil, infix: (*Compiler).binary, precedence: PREC_FACTOR},
 			token.INT:   {prefix: (*Compiler).number, infix: nil, precedence: PREC_NONE},
 			token.FLOAT: {prefix: (*Compiler).number, infix: nil, precedence: PREC_NONE},
 		},
@@ -118,12 +106,12 @@ func (c *Compiler) parsePresedence(presedence int) {
 		panic("Expected expression")
 	}
 
-	rule.execute(c)
+	rule.prefix(c)
 
 	for presedence <= c.getPresedence(c.currentTok.TokenType) && !c.isFinished() {
 		c.advance()
 		rule, _ := c.getParseRule(c.previousTok.TokenType)
-		rule.execute(c)
+		rule.infix(c)
 	}
 }
 
