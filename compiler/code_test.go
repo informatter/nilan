@@ -13,6 +13,11 @@ func TestAssembleInstruction(t *testing.T) {
 	}{
 		// TODO: add more test cases
 		{OP_CONSTANT, []int{65000}, []byte{byte(OP_CONSTANT), 253, 232}},
+		{OP_NEGATE, []int{}, []byte{byte(OP_NEGATE)}},
+		{OP_SUBTRACT, []int{}, []byte{byte(OP_SUBTRACT)}},
+		{OP_ADD, []int{}, []byte{byte(OP_ADD)}},
+		{OP_MULTIPLY, []int{}, []byte{byte(OP_MULTIPLY)}},
+		{OP_DIVIDE, []int{}, []byte{byte(OP_DIVIDE)}},
 	}
 
 	for _, tt := range tests {
@@ -40,6 +45,11 @@ func TestDiassembleInstruction(t *testing.T) {
 	}{
 		// TODO: add more test cases
 		{[]byte{byte(OP_CONSTANT), 253, 232}, "opcode: OP_CONSTANT, operand: 65000, operand widths: 2 bytes"},
+		{[]byte{byte(OP_SUBTRACT)}, "opcode: OP_SUBTRACT, operand: None, operand widths: 0 bytes"},
+		{[]byte{byte(OP_MULTIPLY)}, "opcode: OP_MULTIPLY, operand: None, operand widths: 0 bytes"},
+		{[]byte{byte(OP_DIVIDE)}, "opcode: OP_DIVIDE, operand: None, operand widths: 0 bytes"},
+		{[]byte{byte(OP_ADD)}, "opcode: OP_ADD, operand: None, operand widths: 0 bytes"},
+		{[]byte{byte(OP_NEGATE)}, "opcode: OP_NEGATE, operand: None, operand widths: 0 bytes"},
 	}
 
 	for _, tt := range tests {
