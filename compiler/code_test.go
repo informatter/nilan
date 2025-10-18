@@ -53,9 +53,13 @@ func TestDiassembleInstruction(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		err := DiassembleInstruction(tt.instruction)
+		result, err := DiassembleInstruction(tt.instruction)
 		if err != nil {
 			t.Errorf(err.Error())
+		}
+
+		if tt.expected != result {
+			t.Errorf("wrong diassembled instruction - got: %s, want: %s", result, tt.expected)
 		}
 	}
 }
