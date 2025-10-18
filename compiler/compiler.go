@@ -13,20 +13,12 @@ import (
 // Precedence levels for the grammar's rules, ordered from lowest to highest.
 // Highest rules will be parsed and compiled before lower presedence rules.
 const (
-	PREC_NONE = iota
+	PREC_NONE = iota // LOWEST PRESEDENCE
 	PREC_ASSIGNMENT
 	PREC_TERM   // +,-
 	PREC_FACTOR // /,*
-	PREC_UNARY  // !, -,
+	PREC_UNARY  // !, -, // HIGHEST PRESEDENCE
 )
-
-var precedence = map[token.TokenType]int{
-	token.ADD:  PREC_TERM,
-	token.SUB:  PREC_TERM,
-	token.DIV:  PREC_FACTOR,
-	token.MULT: PREC_FACTOR,
-	token.BANG: PREC_UNARY,
-}
 
 type ParseFunc func(*Compiler)
 
@@ -47,8 +39,8 @@ type Compiler struct {
 
 	totalTokens  int32
 	tokens       []token.Token
-	previousTok  token.Token
 	currentTok   token.Token
+	nextTok      token.Token
 	parsingRules map[token.TokenType]parseRule
 }
 
@@ -139,14 +131,15 @@ func (c *Compiler) DiassembleBytecode(saveToDisk bool) (string, error) {
 }
 
 // Retrieves the parsing rule associated with the given token type.
-// It returns the parseRule and true if found, otherwise returns an empty parseRule and false.
-func (c *Compiler) getParseRule(tokenType token.TokenType) (parseRule, bool) {
+// It returns a valid `parseRule``, or an invalid `parseRule` if a `parseRule`
+// was not found for the `TokenType`.
+func (c *Compiler) getParseRule(tokenType token.TokenType) parseRule {
 	rule, ok := c.parsingRules[tokenType]
 	if !ok {
-		return parseRule{}, false
+		return parseRule{prefix: nil, infix: nil}
 	}
 
-	return rule, true
+	return rule
 }
 
 // begins parsing an expression from the assignment presedence level
@@ -160,17 +153,17 @@ func (c *Compiler) expression() {
 func (c *Compiler) parsePresedence(presedence int) {
 	c.advance()
 
-	rule, success := c.getParseRule(c.previousTok.TokenType)
-	if !success {
+	rule := c.getParseRule(c.currentTok.TokenType)
+	if rule.prefix == nil {
 		panic("Expected expression")
 	}
 
 	rule.prefix(c)
 
-	for presedence <= c.getPresedence(c.currentTok.TokenType) && !c.isFinished() {
+	for c.getParseRule(c.nextTok.TokenType).precedence >= presedence && !c.isFinished() {
 		c.advance()
-		rule, success := c.getParseRule(c.previousTok.TokenType)
-		if !success {
+		rule := c.getParseRule(c.currentTok.TokenType)
+		if rule.infix == nil {
 			// Any token sequence without a valid infix or separator rule between them is invalid.
 			// for example, two identifiers like x y or two numbers like 5 5 would be considered
 			// invalid in the grammar. An infix rule is expected after a valid left-hand expression
@@ -184,12 +177,13 @@ func (c *Compiler) parsePresedence(presedence int) {
 // It parses the right-hand operand with higher precedence and
 // emits the corresponding bytecode for the operator.
 func (c *Compiler) binary() {
-	tokenType := c.previousTok.TokenType
-	prec := c.getPresedence(tokenType)
+	operator := c.currentTok
+	//prec := c.getPresedence(tokenType)
+	rule := c.getParseRule(operator.TokenType)
 	// +1 because each binary operator's right-hand presedence is one
 	// level higher than its own
-	c.parsePresedence(prec + 1) // compile right hand expression (operand) first
-	switch tokenType {
+	c.parsePresedence(rule.precedence + 1) // compile right hand expression (operand) first
+	switch operator.TokenType {
 	case token.SUB:
 		c.emit(OP_SUBTRACT)
 	case token.ADD:
@@ -204,7 +198,7 @@ func (c *Compiler) binary() {
 // Parses and emits code for unary operators (!,-).
 // It parses the operand and emits the appropriate bytecode for the unary operation.
 func (c *Compiler) unary() {
-	tokenType := c.previousTok.TokenType
+	tokenType := c.currentTok.TokenType
 	c.parsePresedence(PREC_UNARY) // // compile right hand expression (oparand) first
 	switch tokenType {
 	case token.SUB:
@@ -220,24 +214,13 @@ func (c *Compiler) unary() {
 // parses integer and floating-point literals and emits their
 // bytecode representation
 func (c *Compiler) number() {
-	tokenType := c.previousTok.TokenType
+	tokenType := c.currentTok.TokenType
 	switch tokenType {
 	case token.INT:
-		c.handleNumber(c.previousTok)
+		c.handleNumber(c.currentTok)
 	case token.FLOAT:
-		c.handleNumber(c.previousTok)
+		c.handleNumber(c.currentTok)
 	}
-}
-
-// Gets the precedence of the given token type.
-// If the token type has no defined precedence, PREC_NONE is returned.
-func (c *Compiler) getPresedence(tokenType token.TokenType) int {
-	prec, ok := precedence[tokenType]
-	if !ok {
-		return PREC_NONE
-	}
-
-	return prec
 }
 
 // isFinished returns true if the parser has reached the end of token stream (EOF).
@@ -252,9 +235,9 @@ func (c *Compiler) advance() {
 	if c.isFinished() {
 		return
 	}
-	c.previousTok = c.tokens[c.readPosition]
-	c.readPosition++
 	c.currentTok = c.tokens[c.readPosition]
+	c.readPosition++
+	c.nextTok = c.tokens[c.readPosition]
 }
 
 // Processes a numeric token into a bytecode instruction.
