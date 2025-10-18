@@ -3,7 +3,11 @@
 package compiler
 
 import (
+	"encoding/binary"
+	"fmt"
 	"nilan/token"
+	"os"
+	"strings"
 )
 
 // Precedence levels for the grammar's rules, ordered from lowest to highest.
@@ -79,6 +83,61 @@ func (c *Compiler) Compile() (Bytecode, error) {
 	return c.bytecode, nil
 }
 
+// Diassembles the compiled bytecode to a human readable format
+// and optionally saves it to disk.
+// It returns the diassembled bytecode as a string or an error if
+// the file could not be created.
+func (c *Compiler) DiassembleBytecode(saveToDisk bool) (string, error) {
+
+	var diassembledBytecode string
+	var builder strings.Builder
+	var instructionLength int
+	ip := 0
+
+	// NOTE: Slicing in go includes the first element, but excludes the last one.
+	// for example, [0:4] will include index 0 to index 3 of the array.
+	for ip <= len(c.bytecode.Instructions) {
+		opCode := Opcode(c.bytecode.Instructions[ip])
+		switch opCode {
+		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_END:
+
+			result, err := DiassembleInstruction([]byte{c.bytecode.Instructions[ip]})
+			if err != nil {
+				panic(err.Error())
+			}
+			builder.WriteString(result)
+
+		case OP_CONSTANT:
+			offset := ip + OP_CONSTANT_TOTAL_BYTES
+			instruction := c.bytecode.Instructions[ip:offset]
+			index := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
+			value := c.bytecode.ConstantsPool[index]
+
+			diassembledInstr, err := DiassembleInstruction(instruction)
+			if err != nil {
+				panic(err.Error())
+			}
+			result := diassembledInstr + fmt.Sprintf(", value: %d", value)
+			builder.WriteString(result)
+			builder.WriteString("\n")
+			instructionLength = OP_CONSTANT_TOTAL_BYTES
+
+		}
+
+		ip += instructionLength
+	}
+	diassembledBytecode = builder.String()
+	if saveToDisk {
+		fDescriptor, err := os.Create("bytecode.txt")
+		if err != nil {
+			return "", fmt.Errorf("error creating diassembled bytecode file: %s", err.Error())
+		}
+		fDescriptor.WriteString(diassembledBytecode)
+		defer fDescriptor.Close()
+	}
+	return diassembledBytecode, nil
+}
+
 // Retrieves the parsing rule associated with the given token type.
 // It returns the parseRule and true if found, otherwise returns an empty parseRule and false.
 func (c *Compiler) getParseRule(tokenType token.TokenType) (parseRule, bool) {
@@ -110,7 +169,13 @@ func (c *Compiler) parsePresedence(presedence int) {
 
 	for presedence <= c.getPresedence(c.currentTok.TokenType) && !c.isFinished() {
 		c.advance()
-		rule, _ := c.getParseRule(c.previousTok.TokenType)
+		rule, success := c.getParseRule(c.previousTok.TokenType)
+		if !success {
+			// Any token sequence without a valid infix or separator rule between them is invalid.
+			// for example, two identifiers like x y or two numbers like 5 5 would be considered
+			// invalid in the grammar. An infix rule is expected after a valid left-hand expression
+			panic("SyntaxError: invalid syntax")
+		}
 		rule.infix(c)
 	}
 }
