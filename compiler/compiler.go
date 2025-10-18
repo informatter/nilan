@@ -79,7 +79,7 @@ func NewCompiler(tokens []token.Token) *Compiler {
 func (c *Compiler) Compile() (Bytecode, error) {
 
 	c.expression()
-
+	c.emit(OP_END)
 	return c.bytecode, nil
 }
 
