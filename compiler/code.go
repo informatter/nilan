@@ -62,10 +62,10 @@ var definitions = map[Opcode]*OpCodeDefinition{
 	OP_CONSTANT: {Name: "OP_CONSTANT", OperandWidths: []int{2}},
 	OP_END:      {Name: "OP_END"},
 	OP_SUBTRACT: {Name: "OP_SUBTRACT"},
-	OP_ADD: {Name: "OP_ADD"},
+	OP_ADD:      {Name: "OP_ADD"},
 	OP_MULTIPLY: {Name: "OP_MULTIPLY"},
-	OP_DIVIDE: {Name: "OP_DIVIDE"},
-	OP_NEGATE: {Name: "OP_NEGATE"},
+	OP_DIVIDE:   {Name: "OP_DIVIDE"},
+	OP_NEGATE:   {Name: "OP_NEGATE"},
 }
 
 func Get(op Opcode) (*OpCodeDefinition, error) {
@@ -123,7 +123,7 @@ func AssembleInstruction(op Opcode, operands ...int) []byte {
 		switch op {
 		case OP_CONSTANT:
 			binary.BigEndian.PutUint16(instruction[byteOffset:], uint16(operand))
-		case OP_ADD,OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY,OP_NEGATE, OP_END:
+		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_END:
 			return instruction
 
 		}
@@ -131,7 +131,6 @@ func AssembleInstruction(op Opcode, operands ...int) []byte {
 	}
 	return instruction
 }
-
 
 // Takes a single bytecode instruction and prints out its
 // decoded representation in a human-readable format.
@@ -149,22 +148,23 @@ func AssembleInstruction(op Opcode, operands ...int) []byte {
 //
 // Returns:
 //   - An error if the opcode in the `instruction` is not recognised
-func DiassembleInstruction(instruction []byte) error {
+func DiassembleInstruction(instruction []byte) (string, error) {
 	opcode := Opcode(instruction[0])
 
 	def, err := Get(opcode)
 	if err != nil {
-		return fmt.Errorf("unrecognised opcode")
+		return "", fmt.Errorf("unrecognised opcode")
 	}
 
+	var diassembled string
 	switch opcode {
 	case OP_CONSTANT:
 		operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
-		fmt.Printf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, def.OperandWidths[0])
+		diassembled = fmt.Sprintf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, def.OperandWidths[0])
 
-		case OP_ADD,OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY,OP_NEGATE, OP_END:
-			fmt.Printf("opcode: %s, operand: %s, operand widths: %d bytes", def.Name, "None", 0)
+	case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_END:
+		diassembled = fmt.Sprintf("opcode: %s, operand: %s, operand widths: %d bytes", def.Name, "None", 0)
 	}
 
-	return nil
+	return diassembled, nil
 }
