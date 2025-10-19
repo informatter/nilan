@@ -118,28 +118,49 @@ func TestCompileNumericTokens_UnaryExpressions(t *testing.T) {
 }
 
 func TestDiassembleBytecode(t *testing.T) {
-	tokens := []token.Token{
-		token.CreateLiteralToken(token.INT, int64(5), "5", 0, 0),
-		token.CreateToken(token.ADD, 0, 0),
-		token.CreateLiteralToken(token.INT, int64(15), "15", 0, 0),
-		token.CreateToken(token.EOF, 0, 0),
-	}
-	expected := `opcode: OP_CONSTANT, operand: 0, operand widths: 2 bytes, value: 5
-opcode: OP_CONSTANT, operand: 1, operand widths: 2 bytes, value: 15
-opcode: OP_ADD, operand: None, operand widths: 0 bytes`
 
-	compiler := NewCompiler(tokens)
-	_, err := compiler.Compile()
-	if err != nil {
-		t.Errorf("compilation error occurred: %s", err.Error())
+	tests := []struct {
+		tokens   []token.Token
+		expected string
+	}{
+		{
+			tokens: []token.Token{
+				token.CreateLiteralToken(token.INT, int64(1), "1", 0, 0),
+				token.CreateToken(token.ADD, 0, 0),
+				token.CreateLiteralToken(token.INT, int64(2), "2", 0, 0),
+				token.CreateToken(token.MULT, 0, 0),
+				token.CreateLiteralToken(token.INT, int64(4), "4", 0, 0),
+				token.CreateToken(token.ADD, 0, 0),
+				token.CreateLiteralToken(token.INT, int64(3), "3", 0, 0),
+				token.CreateToken(token.EOF, 0, 0),
+			},
+			expected: `opcode: OP_CONSTANT, operand: 0, operand widths: 2 bytes, value: 1
+opcode: OP_CONSTANT, operand: 1, operand widths: 2 bytes, value: 2
+opcode: OP_CONSTANT, operand: 2, operand widths: 2 bytes, value: 4
+opcode: OP_MULTIPLY, operand: None, operand widths: 0 bytes
+opcode: OP_ADD, operand: None, operand widths: 0 bytes
+opcode: OP_CONSTANT, operand: 3, operand widths: 2 bytes, value: 3
+opcode: OP_ADD, operand: None, operand widths: 0 bytes
+opcode: OP_END, operand: None, operand widths: 0 bytes`,
+		},
 	}
 
-	result, err := compiler.DiassembleBytecode(false)
-	if err != nil {
-		t.Errorf("bytecode diassembly error: %s", err.Error())
+	for _, tt := range tests {
+
+		compiler := NewCompiler(tt.tokens)
+		_, err := compiler.Compile()
+		if err != nil {
+			t.Errorf("compilation error occurred: %s", err.Error())
+		}
+
+		result, err := compiler.DiassembleBytecode(false)
+		if err != nil {
+			t.Errorf("bytecode diassembly error: %s", err.Error())
+		}
+
+		if strings.TrimSpace(result) != strings.TrimSpace(tt.expected) {
+			t.Errorf("\n\nwant:\n%s\n\ngot:\n%s", tt.expected, result)
+		}
 	}
 
-	if strings.TrimSpace(result) != strings.TrimSpace(expected) {
-		t.Errorf("\n\nwant:\n%s\n\ngot:\n%s", expected, result)
-	}
 }
