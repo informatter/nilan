@@ -84,11 +84,12 @@ func (c *Compiler) DiassembleBytecode(saveToDisk bool) (string, error) {
 	var diassembledBytecode string
 	var builder strings.Builder
 	var instructionLength int
+	totalInstructions := len(c.bytecode.Instructions) - 1
 	ip := 0
 
 	// NOTE: Slicing in go includes the first element, but excludes the last one.
 	// for example, [0:4] will include index 0 to index 3 of the array.
-	for ip <= len(c.bytecode.Instructions) {
+	for ip <= totalInstructions {
 		opCode := Opcode(c.bytecode.Instructions[ip])
 		switch opCode {
 		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_END:
@@ -98,6 +99,11 @@ func (c *Compiler) DiassembleBytecode(saveToDisk bool) (string, error) {
 				panic(err.Error())
 			}
 			builder.WriteString(result)
+			if opCode == OP_END {
+				break
+			}
+			builder.WriteString("\n")
+			instructionLength = OPCODE_TOTAL_BYTES
 
 		case OP_CONSTANT:
 			offset := ip + OP_CONSTANT_TOTAL_BYTES
@@ -131,7 +137,7 @@ func (c *Compiler) DiassembleBytecode(saveToDisk bool) (string, error) {
 }
 
 // Retrieves the parsing rule associated with the given token type.
-// It returns a valid `parseRule``, or an invalid `parseRule` if a `parseRule`
+// It returns a valid `parseRule“, or an invalid `parseRule` if a `parseRule`
 // was not found for the `TokenType`.
 func (c *Compiler) getParseRule(tokenType token.TokenType) parseRule {
 	rule, ok := c.parsingRules[tokenType]
@@ -178,7 +184,6 @@ func (c *Compiler) parsePresedence(presedence int) {
 // emits the corresponding bytecode for the operator.
 func (c *Compiler) binary() {
 	operator := c.currentTok
-	//prec := c.getPresedence(tokenType)
 	rule := c.getParseRule(operator.TokenType)
 	// +1 because each binary operator's right-hand presedence is one
 	// level higher than its own
@@ -199,7 +204,7 @@ func (c *Compiler) binary() {
 // It parses the operand and emits the appropriate bytecode for the unary operation.
 func (c *Compiler) unary() {
 	tokenType := c.currentTok.TokenType
-	c.parsePresedence(PREC_UNARY) // // compile right hand expression (oparand) first
+	c.parsePresedence(PREC_UNARY) // compile right hand expression (oparand) first
 	switch tokenType {
 	case token.SUB:
 		c.emit(OP_NEGATE)
