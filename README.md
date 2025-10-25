@@ -417,6 +417,7 @@ go fmt ./...
 - [Crafting Interpreters](https://craftinginterpreters.com/) by Robert Nystrom
 - [Extended Backus-Naur Form (EBNF)](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form)
 - [Recursive Descent Parser](https://en.wikipedia.org/wiki/Recursive_descent_parser)
+- [Pratt Parser](https://www.chidiwilliams.com/posts/on-recursive-descent-and-pratt-parsing)
 - [Visitor Pattern (Go example)](https://refactoring.guru/design-patterns/visitor/go/example)
 - [Operator Precedence Explained](https://dear-computer.twodee.org/expressions/precedence.html)
 
