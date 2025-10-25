@@ -13,21 +13,21 @@ func (s *Stack) Push(value any) {
 }
 
 // Removes and returns the top element of the stack
-func (s *Stack) Pop() (any, bool) {
+func (s *Stack) Pop() any {
 	if s.IsEmpty() {
-		return nil, false
+		return nil
 	}
 	index := len(*s) - 1
 	element := (*s)[index]
 	*s = (*s)[:index]
-	return element, true
+	return element
 }
 
 // Returns the top element without removing it
-func (s *Stack) Peek() (any, bool) {
+func (s *Stack) Peek() any {
 	if s.IsEmpty() {
-		return nil, false
+		return nil
 	}
 	index := len(*s) - 1
-	return (*s)[index], true
+	return (*s)[index]
 }
