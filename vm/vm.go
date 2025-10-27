@@ -9,34 +9,74 @@ import (
 type arithmeticFuncFloat func(a float64, b float64) float64
 type arithmeticFuncInt func(a int64, b int64) int64
 
-func addFloat(a float64, b float64) float64{
-	return a+b
+func addFloat(a float64, b float64) float64 {
+	return a + b
 }
-func addInt(a int64, b int64) int64{
-	return a+b
+func addInt(a int64, b int64) int64 {
+	return a + b
 }
-func subFloat(a float64, b float64) float64{
-	return a-b
+func subFloat(a float64, b float64) float64 {
+	return a - b
 }
-func subInt(a int64, b int64) int64{
-	return a-b
+func subInt(a int64, b int64) int64 {
+	return a - b
 }
-func multFloat(a float64, b float64) float64{
-	return a*b
+func multFloat(a float64, b float64) float64 {
+	return a * b
 }
-func multInt(a int64, b int64) int64{
-	return a*b
+func multInt(a int64, b int64) int64 {
+	return a * b
 }
-func divFloat(a float64, b float64) float64{
+func divFloat(a float64, b float64) float64 {
 	// TODO: Add runtime error division by zero
-	return a/b
+	return a / b
 }
-func divInt(a int64, b int64) int64{
+func divInt(a int64, b int64) int64 {
 	// TODO: Add runtime error division by zero
-	return a/b
+	return a / b
 }
 
-func literalToInt64(value any) (int64,error){
+// Determines if a value is a float.
+//
+// Parameters:
+//   - value: the literal value (various possible types).
+//
+// Returns:
+//   - bool: true if the value is an float, false otherwise.
+func isFloat(value any) bool {
+	switch value.(type) {
+	case float32, float64:
+		return true
+	default:
+		return false
+	}
+}
+
+// Determines if a value is an integer.
+//
+// Parameters:
+//   - value: the literal value (various possible types).
+//
+// Returns:
+//   - bool: true if the value is an integer, false otherwise.
+func isInt(value any) bool {
+	switch value.(type) {
+	case int, int8, int16, int32, int64:
+		return true
+	default:
+		return false
+	}
+}
+
+// Attempts to convert a literal value into a int64.
+//
+// Parameters:
+//   - value: the literal value (various possible types).
+//
+// Returns:
+//   - int64: the converted numeric value.
+//   - error: on failure to convert value to float64.
+func literalToInt64(value any) (int64, error) {
 
 	switch v := value.(type) {
 	case int:
@@ -49,10 +89,10 @@ func literalToInt64(value any) (int64,error){
 		return int64(v), nil
 	default:
 		return 0, fmt.Errorf("unsupported type: %T", value)
-	}	
+	}
 }
 
-// literalToFloat64 attempts to convert a literal value into a float64.
+// Attempts to convert a literal value into a float64.
 //
 // Parameters:
 //   - value: the literal value (various possible types).
@@ -116,26 +156,26 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 		case compiler.OP_CONSTANT:
 			instructionLength = vm.execConstantInstruction(bytecode)
 		case compiler.OP_ADD:
-			l,err := vm.execArithmeticInstruction(addFloat,addInt)
-			if err!=nil{
+			l, err := vm.execArithmeticInstruction(addFloat, addInt)
+			if err != nil {
 				return err
 			}
 			instructionLength = l
 		case compiler.OP_SUBTRACT:
-			l,err := vm.execArithmeticInstruction(subFloat,subInt)
-			if err!=nil{
+			l, err := vm.execArithmeticInstruction(subFloat, subInt)
+			if err != nil {
 				return err
 			}
-			instructionLength = l			
+			instructionLength = l
 		case compiler.OP_MULTIPLY:
-			l,err := vm.execArithmeticInstruction(multFloat,multInt)
-			if err!=nil{
+			l, err := vm.execArithmeticInstruction(multFloat, multInt)
+			if err != nil {
 				return err
 			}
 			instructionLength = l
 		case compiler.OP_DIVIDE:
-			l,err := vm.execArithmeticInstruction(divFloat,divInt)
-			if err!=nil{
+			l, err := vm.execArithmeticInstruction(divFloat, divInt)
+			if err != nil {
 				return err
 			}
 			instructionLength = l
@@ -147,7 +187,6 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 		vm.ip += instructionLength
 	}
 }
-
 
 // Fetches and pushes a constant value from the bytecode
 // onto the VM's stack.
@@ -163,7 +202,7 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 // Returns:
 //   - int: The total number of bytes consumed by this instruction, used to
 //     increment the VM's instruction pointer.
-func (vm *VirtualMachine) execConstantInstruction(bytecode compiler.Bytecode) int{
+func (vm *VirtualMachine) execConstantInstruction(bytecode compiler.Bytecode) int {
 	index := vm.ip + compiler.OPCODE_TOTAL_BYTES
 	instruction := bytecode.Instructions[index : vm.ip+compiler.OP_CONSTANT_TOTAL_BYTES]
 	operand := binary.BigEndian.Uint16(instruction)
@@ -176,7 +215,7 @@ func (vm *VirtualMachine) execConstantInstruction(bytecode compiler.Bytecode) in
 // based on the operand types and provided arithmetic functions.
 //
 // It pops two operands from the stack, determines whether they are integers
-// or floats, and applies the corresponding arithmetic function. 
+// or floats, and applies the corresponding arithmetic function.
 // The result is then pushed back onto the stack.
 //
 // Parameters:
@@ -187,32 +226,59 @@ func (vm *VirtualMachine) execConstantInstruction(bytecode compiler.Bytecode) in
 //   - int: The number of bytes consumed by the instruction, used to advance the
 //     instruction pointer.
 //   - error: A RuntimeError if operand types are invalid, otherwise nil.
-func (vm *VirtualMachine) execArithmeticInstruction(operationFloat arithmeticFuncFloat,operationInt arithmeticFuncInt) (int, error) {
-	b:=vm.stack.Pop()
-	a:= vm.stack.Pop()
+func (vm *VirtualMachine) execArithmeticInstruction(operationFloat arithmeticFuncFloat, operationInt arithmeticFuncInt) (int, error) {
+	b := vm.stack.Pop()
+	a := vm.stack.Pop()
 
-	if a!=nil && b!=nil{
-		bIntVal,aErr := literalToInt64(b)
-		aIntVal, bErr := literalToInt64(a)
-		
-		if aErr!=nil && bErr != nil{
-			bFloatVal,aFErr := literalToFloat64(b)
-			aFloatVal, bFErr := literalToFloat64(a)
+	if a != nil && b != nil {
+		var aFloatVal float64
+		var aIntVal int64
+		var bFloatVal float64
+		var bIntVal int64
+		isAFloat := isFloat(a)
+		isBFloat := isFloat(b)
+		isAInt := isInt(a)
+		isBInt := isInt(b)
 
-			if aFErr == nil && bFErr == nil{
-
-				result:= operationFloat(aFloatVal,bFloatVal)
-				vm.stack.Push(result)
-			}else{
-				message := fmt.Sprintf("operands must be numeric values: %v,%v",a,b)
-				return 0, RuntimeError{Message: message}
-			}
-
+		if isAFloat {
+			val, _ := literalToFloat64(a)
+			aFloatVal = val
 		}
-		
-		result :=operationInt(aIntVal,bIntVal)
-		vm.stack.Push(result)
+		if isBFloat {
+			val, _ := literalToFloat64(b)
+			bFloatVal = val
+		}
+		if isAInt {
+			val, _ := literalToInt64(a)
+			aIntVal = val
+		}
+		if isBInt {
+			val, _ := literalToInt64(b)
+			bIntVal = val
+		}
+
+		if !isAFloat && !isBFloat && !isAInt && !isBInt {
+			message := fmt.Sprintf("operands must be numeric values: %v,%v", a, b)
+			return 0, RuntimeError{Message: message}
+		}
+
+		if isAFloat && isBFloat {
+			result := operationFloat(aFloatVal, bFloatVal)
+			vm.stack.Push(result)
+		}
+		if isAFloat && isBInt {
+			result := operationFloat(aFloatVal, float64(bIntVal))
+			vm.stack.Push(result)
+		}
+		if isAInt && isBFloat {
+			result := operationFloat(float64(aFloatVal), bFloatVal)
+			vm.stack.Push(result)
+		}
+		if isAInt && isBInt {
+			result := operationInt(aIntVal, bIntVal)
+			vm.stack.Push(result)
+		}
 	}
 
-	return compiler.OPCODE_TOTAL_BYTES,nil
+	return compiler.OPCODE_TOTAL_BYTES, nil
 }
