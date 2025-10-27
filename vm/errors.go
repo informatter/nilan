@@ -1,7 +1,8 @@
 package vm
+
 import "fmt"
 
-type RuntimeError struct{
+type RuntimeError struct {
 	Message string
 }
 
