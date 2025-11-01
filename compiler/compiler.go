@@ -46,7 +46,7 @@ type Compiler struct {
 
 // Creates a `Compiler` instance and returns
 // a pointer to it.
-func NewCompiler(tokens []token.Token) *Compiler {
+func Make(tokens []token.Token) *Compiler {
 	c := &Compiler{
 		bytecode: Bytecode{
 			Instructions:  Instructions{},
@@ -75,11 +75,32 @@ func (c *Compiler) Compile() (Bytecode, error) {
 	return c.bytecode, nil
 }
 
+// Writes the compiled bytecode to a file with a `.nic` extension.
+// The bytecode  is encoded as hexadecimal so it can be viewed in a
+// text editor
+func (c *Compiler) DumpBytecode(filePath string) error {
+
+	if filePath == "" {
+		filePath = "bytecode.nic"
+	} else {
+		filePath = filePath + ".nic"
+	}
+	fDescriptor, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("error creating nilan bytecode file: %s", err.Error())
+	}
+
+	encoded := fmt.Sprintf("%x", c.bytecode.Instructions)
+	fDescriptor.Write([]byte(encoded))
+	defer fDescriptor.Close()
+	return nil
+}
+
 // Diassembles the compiled bytecode to a human readable format
 // and optionally saves it to disk.
 // It returns the diassembled bytecode as a string or an error if
 // the file could not be created.
-func (c *Compiler) DiassembleBytecode(saveToDisk bool) (string, error) {
+func (c *Compiler) DiassembleBytecode(saveToDisk bool, filePath string) (string, error) {
 
 	var diassembledBytecode string
 	var builder strings.Builder
@@ -126,7 +147,12 @@ func (c *Compiler) DiassembleBytecode(saveToDisk bool) (string, error) {
 	}
 	diassembledBytecode = builder.String()
 	if saveToDisk {
-		fDescriptor, err := os.Create("bytecode.txt")
+		if filePath == "" {
+			filePath = "bytecode.dnic"
+		} else {
+			filePath = filePath + ".dnic"
+		}
+		fDescriptor, err := os.Create(filePath)
 		if err != nil {
 			return "", fmt.Errorf("error creating diassembled bytecode file: %s", err.Error())
 		}
