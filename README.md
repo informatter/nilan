@@ -355,7 +355,7 @@ go install .
 
 ## Usage
 
-Once installed there are two main commands than can be used:
+Once installed there are three main commands than can be used. The first two are still based of the tree-walk interpreter and the third command now uses the compiled version of nilan that is under development.
 
 **1. REPL**
 
@@ -370,6 +370,17 @@ Compiles the specified file and executes it directly
 ```bash
 nilan run hellow_world.ni
 ```
+
+**3. Emit**
+
+Emits the bytecode representation, or the diassembled bytecode representation from a nilan source code file. This command is useful for debugging purposes when developing the compiler.
+
+```bash
+nilan emit arithmetic.ni
+```
+
+
+The above commands are using the tree-walk interpreter. 
 
 💡If changes are made to the code, run `go install .` once again so a new binary is created with the new changes.
 
