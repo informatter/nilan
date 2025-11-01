@@ -1,0 +1,8 @@
+opcode: OP_CONSTANT, operand: 0, operand widths: 2 bytes, value: 1
+opcode: OP_CONSTANT, operand: 1, operand widths: 2 bytes, value: 2
+opcode: OP_ADD, operand: None, operand widths: 0 bytes
+opcode: OP_CONSTANT, operand: 2, operand widths: 2 bytes, value: 3
+opcode: OP_ADD, operand: None, operand widths: 0 bytes
+opcode: OP_CONSTANT, operand: 3, operand widths: 2 bytes, value: 4
+opcode: OP_ADD, operand: None, operand widths: 0 bytes
+opcode: OP_END, operand: None, operand widths: 0 bytes
