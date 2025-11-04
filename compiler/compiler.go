@@ -70,7 +70,10 @@ func New(tokens []token.Token) *Compiler {
 // Compiles a stream of `Token`s into `Bytecode`
 func (c *Compiler) Compile() (Bytecode, error) {
 
-	c.expression()
+	err := c.expression()
+	if err != nil {
+		return c.bytecode, err
+	}
 	c.emit(OP_END)
 	return c.bytecode, nil
 }
@@ -175,8 +178,20 @@ func (c *Compiler) getParseRule(tokenType token.TokenType) parseRule {
 }
 
 // begins parsing an expression from the assignment presedence level
-func (c *Compiler) expression() {
+// A `SyntaxError` is returned if an error occurs.
+func (c *Compiler) expression() (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch v := r.(type) {
+			case string:
+				err = SyntaxError{
+					Message: v,
+				}
+			}
+		}
+	}()
 	c.parsePresedence(PREC_ASSIGNMENT)
+	return nil
 }
 
 // Parses expressions with the provided precedence level.
@@ -199,7 +214,7 @@ func (c *Compiler) parsePresedence(presedence int) {
 			// Any token sequence without a valid infix or separator rule between them is invalid.
 			// for example, two identifiers like x y or two numbers like 5 5 would be considered
 			// invalid in the grammar. An infix rule is expected after a valid left-hand expression
-			panic("SyntaxError: invalid syntax")
+			panic("Invalid syntax")
 		}
 		rule.infix(c)
 	}
