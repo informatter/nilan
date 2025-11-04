@@ -398,6 +398,11 @@ To see all available flags:
 ```bash
 nilan cRepl --help
 ```
+💡If changes are made to the code, run `go install .` once again so a new binary is created with the new changes.
+
+For iterative development is recommended to simply run:
+
+`go run . -- cRepl` **or** `go run . -- emit <file-name>`
 
 
 ### Testing
