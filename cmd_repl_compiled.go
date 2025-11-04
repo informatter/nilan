@@ -65,12 +65,13 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 		bytecode, err := compiler.Compile()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
+			continue
 		}
 		if cmd.diassemble {
 			_, err := compiler.DiassembleBytecode(true, "")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "💥 Bytecode diassemble error:\n:\t%s", err.Error())
-				return subcommands.ExitFailure
+				continue
 			}
 
 		}
@@ -78,14 +79,13 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 			err := compiler.DumpBytecode("")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "💥 Dump bytecode error:\n:\t%s", err.Error())
-				return subcommands.ExitFailure
 			}
 		}
 		vm := vm.New()
 		runtimeErr := vm.Run(bytecode)
 		if runtimeErr != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			return subcommands.ExitFailure
+			fmt.Fprintln(os.Stderr, runtimeErr.Error())
+			continue
 		}
 	}
 }
