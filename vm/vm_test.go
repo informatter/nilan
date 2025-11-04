@@ -188,5 +188,3 @@ func TestExecuteBytecodeBinaryOpFloatVMStack(t *testing.T) {
 
 	assertResults(tests, t)
 }
-
-

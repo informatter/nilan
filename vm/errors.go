@@ -7,5 +7,5 @@ type RuntimeError struct {
 }
 
 func (e RuntimeError) Error() string {
-	return fmt.Sprintf("💥 Nilan Runtime error: %s", e.Message)
+	return fmt.Sprintf("💥 RuntimeError: %s", e.Message)
 }

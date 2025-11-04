@@ -153,7 +153,7 @@ opcode: OP_END, operand: None, operand widths: 0 bytes`,
 			t.Errorf("compilation error occurred: %s", err.Error())
 		}
 
-		result, err := compiler.DiassembleBytecode(false,"")
+		result, err := compiler.DiassembleBytecode(false, "")
 		if err != nil {
 			t.Errorf("bytecode diassembly error: %s", err.Error())
 		}
