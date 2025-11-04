@@ -28,7 +28,7 @@ func (*replCompiledCmd) Usage() string {
 }
 
 func (cmd *replCompiledCmd) SetFlags(f *flag.FlagSet) {
-	f.BoolVar(&cmd.diassemble, "diassemble", false, "diassemble the bytecode and dump it to a text file.")
+	f.BoolVar(&cmd.diassemble, "diassemble", false, "diassemble the bytecode and dump it to a .dnic file")
 	f.BoolVar(&cmd.dumpBytecode, "dumpBytecode", false, "Writes the encoded bytecode as hexadecimal to a .nic file")
 	f.BoolVar(&cmd.diassemble, "di", false, "Shorthand for diassemble.")
 	f.BoolVar(&cmd.dumpBytecode, "du", false, "Shorthand for dumpBytecode")
