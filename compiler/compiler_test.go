@@ -80,7 +80,7 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		compiler := Make(tt.tokens)
+		compiler := New(tt.tokens)
 		bytecode, err := compiler.Compile()
 		if err != nil {
 			t.Errorf("compilation error occurred: %s", err.Error())
@@ -108,7 +108,7 @@ func TestCompileNumericTokens_UnaryExpressions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		compiler := Make(tt.tokens)
+		compiler := New(tt.tokens)
 		bytecode, err := compiler.Compile()
 		if err != nil {
 			t.Errorf("compilation error occurred: %s", err.Error())
@@ -147,13 +147,13 @@ opcode: OP_END, operand: None, operand widths: 0 bytes`,
 
 	for _, tt := range tests {
 
-		compiler := Make(tt.tokens)
+		compiler := New(tt.tokens)
 		_, err := compiler.Compile()
 		if err != nil {
 			t.Errorf("compilation error occurred: %s", err.Error())
 		}
 
-		result, err := compiler.DiassembleBytecode(false)
+		result, err := compiler.DiassembleBytecode(false,"")
 		if err != nil {
 			t.Errorf("bytecode diassembly error: %s", err.Error())
 		}

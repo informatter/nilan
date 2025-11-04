@@ -46,7 +46,7 @@ type Compiler struct {
 
 // Creates a `Compiler` instance and returns
 // a pointer to it.
-func Make(tokens []token.Token) *Compiler {
+func New(tokens []token.Token) *Compiler {
 	c := &Compiler{
 		bytecode: Bytecode{
 			Instructions:  Instructions{},
