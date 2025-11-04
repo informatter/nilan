@@ -82,7 +82,7 @@ func TestComments(t *testing.T) {
 	#}
 	`
 
-	scanner := CreateLexer(test)
+	scanner := New(test)
 	runTest(expected, scanner, t)
 
 }
@@ -123,7 +123,7 @@ func TestLiteralStrings(t *testing.T) {
 	 which continues here
 	"
 	`
-	scanner := CreateLexer(test)
+	scanner := New(test)
 	runTest(expected, scanner, t)
 }
 
@@ -156,7 +156,7 @@ func TestHandleStringLiteralErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scanner := CreateLexer(tt.input)
+			scanner := New(tt.input)
 
 			_, err := scanner.Scan()
 
@@ -195,7 +195,7 @@ func TestHandleNumberErrors(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scanner := CreateLexer(tt.input)
+			scanner := New(tt.input)
 
 			_, err := scanner.Scan()
 
@@ -222,7 +222,7 @@ func TestHandleNumber(t *testing.T) {
 	0.0001
 	1000
 	`
-	scanner := CreateLexer(test)
+	scanner := New(test)
 	runTest(expected, scanner, t)
 }
 
@@ -351,7 +351,7 @@ func TestScanSourceCode(t *testing.T) {
 	if and or while for
 	`
 
-	scanner := CreateLexer(test)
+	scanner := New(test)
 	runTest(expected, scanner, t)
 
 }

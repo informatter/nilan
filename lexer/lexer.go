@@ -61,7 +61,7 @@ type Lexer struct {
 //
 // Returns:
 //   - *Lexer: A pointer to a newly created Lexer instance.
-func CreateLexer(input string) *Lexer {
+func New(input string) *Lexer {
 	lexer := &Lexer{
 		characters: []rune(input),
 	}
