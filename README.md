@@ -353,7 +353,7 @@ cd nilan
 go install .
 ```
 
-## Usage
+## Usage Tree-walk interpreter version
 
 Once installed there are three main commands than can be used. The first two are still based of the tree-walk interpreter and the third command now uses the compiled version of nilan that is under development.
 
@@ -371,26 +371,33 @@ Compiles the specified file and executes it directly
 nilan run hellow_world.ni
 ```
 
-**3. Emit**
-
-Emits the bytecode representation, or the diassembled bytecode representation from a nilan source code file. This command is useful for debugging purposes when developing the compiler.
-
-```bash
-nilan emit arithmetic.ni
-```
-
-
-The above commands are using the tree-walk interpreter. 
-
 💡If changes are made to the code, run `go install .` once again so a new binary is created with the new changes.
 
 For iterative development is recommended to simply run:
 
 `go run . -- repl` **or** `go run . -- run <file-name>`
 
-for a more efficient workflow.
+## Usage compiled version
 
-💡The two above CLI commands will use the tree-walk interpreter while the compiler and VM are implemented to the same level.
+**1. Emit**
+
+Emits the bytecode representation, or the diassembled bytecode representation from a nilan source code file. This command is useful for debugging purposes when developing the compiler.
+
+```bash
+nilan emit arithmetic.ni
+```
+**2. REPL**
+
+Start a REPL session, optionally write the encoded bytecode as hexadecimal to a .nic file or diassemble the bytecode and dump it to a .dnic file
+
+```bash
+nilan cRepl
+```
+
+To see all available flags:
+```bash
+nilan cRepl --help
+```
 
 
 ### Testing
