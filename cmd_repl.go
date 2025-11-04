@@ -8,10 +8,11 @@ import (
 	"io"
 	"os"
 
-	"github.com/google/subcommands"
 	"nilan/interpreter"
 	"nilan/lexer"
 	"nilan/parser"
+
+	"github.com/google/subcommands"
 )
 
 // replCmd implements the REPL command
@@ -40,7 +41,7 @@ func repl(in io.Reader, out io.Writer) {
 		if line == "exit" {
 			os.Exit(0)
 		}
-		lex := lexer.CreateLexer(line)
+		lex := lexer.New(line)
 		tokens, err := lex.Scan()
 		if err != nil {
 			fmt.Println(err)

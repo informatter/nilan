@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/google/subcommands"
 	"nilan/interpreter"
 	"nilan/lexer"
 	"nilan/parser"
+
+	"github.com/google/subcommands"
 )
 
 // replCmd implements the REPL command
@@ -39,7 +40,7 @@ func (r *runCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{})
 	}
 
 	interpreter := interpreter.Make()
-	lex := lexer.CreateLexer(string(data))
+	lex := lexer.New(string(data))
 	tokens, err := lex.Scan()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Lexing error: %v\n", err)

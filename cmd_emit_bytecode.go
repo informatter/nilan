@@ -45,13 +45,13 @@ func (r *emitBytecodeCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...int
 		return subcommands.ExitFailure
 	}
 
-	lex := lexer.CreateLexer(string(data))
+	lex := lexer.New(string(data))
 	tokens, err := lex.Scan()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Lexing error: %v\n", err)
 		return subcommands.ExitFailure
 	}
-	compiler := compiler.Make(tokens)
+	compiler := compiler.New(tokens)
 
 	_, cErr := compiler.Compile()
 
