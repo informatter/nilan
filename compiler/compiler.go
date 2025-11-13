@@ -62,6 +62,7 @@ func New(tokens []token.Token) *Compiler {
 			token.MULT:  {prefix: nil, infix: (*Compiler).binary, precedence: PREC_FACTOR},
 			token.INT:   {prefix: (*Compiler).number, infix: nil, precedence: PREC_NONE},
 			token.FLOAT: {prefix: (*Compiler).number, infix: nil, precedence: PREC_NONE},
+			token.LPA:   {prefix: (*Compiler).grouping, infix: nil, precedence: PREC_NONE},
 		},
 	}
 	return c
@@ -165,6 +166,17 @@ func (c *Compiler) DiassembleBytecode(saveToDisk bool, filePath string) (string,
 	return diassembledBytecode, nil
 }
 
+// advances the parser to the next token if the next tokens type
+// matches the provided `tokenType`. If it does not, a panic is raised
+// which is basically a syntax error
+func (c *Compiler) consume(tokenType token.TokenType, errorMsg string) {
+	if c.nextTok.TokenType == tokenType {
+		c.advance()
+		return
+	}
+	panic(errorMsg)
+}
+
 // Retrieves the parsing rule associated with the given token type.
 // It returns a valid `parseRule“, or an invalid `parseRule` if a `parseRule`
 // was not found for the `TokenType`.
@@ -218,6 +230,15 @@ func (c *Compiler) parsePresedence(presedence int) {
 		}
 		rule.infix(c)
 	}
+}
+
+// Handles paranthesized expressions.
+func (c *Compiler) grouping() {
+	err := c.expression()
+	if err != nil {
+		panic(err.Error())
+	}
+	c.consume(token.RPA, "invalid syntax. Perhaps you forgot ')'?")
 }
 
 // Parses and emits code for binary operators (+, -, *, /).
