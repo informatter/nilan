@@ -432,6 +432,8 @@ Example:
 5
 ```
 
+💡To invoke the CLI commands during development (to not build the binary) use `go run` before the command, e.g `go run nilan cRepl` This way after any code changes, the command can run with the updated code, without needing to build the binary.
+
 ### Tree-Walk Interpreter (Deprecated)
 
 The following commands are still available but use the deprecated tree-walk interpreter:
@@ -485,6 +487,83 @@ Format all Go files:
 ```bash
 go fmt ./...
 ```
+
+There are also handy aliases in `.aliases.sh` for running all the test suite, formatting and building the binary
+
+```bash
+source .aliases
+format
+build
+test
+```
+
+### Using the debugger
+
+💡The below instructions are specifically for VSCode
+
+A debugger can be used if desired by installing the Delve debugger for the golang programming language:
+
+```bash
+go install github.com/go-delve/delve/cmd/dlv@latest
+```
+
+Then create a `.vscode` folder and add the following `launch.json` file:
+
+```json
+
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Nilan Code Execution (dlv-dap)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "debugAdapter": "dlv-dap",
+            "console": "integratedTerminal",
+            // NOTE: Change file if needed.
+            "args": ["run","hellow_world.ni"]
+        },
+        {
+            "name": "Launch Nilan REPL (dlv-dap)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "debugAdapter": "dlv-dap",
+            "console": "integratedTerminal",
+            "args": ["repl"]
+        },
+        {
+            "name": "Launch Nilan Compile Emit (dlv-dap)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "debugAdapter": "dlv-dap",
+            "console": "integratedTerminal",
+            "args": ["emit","arithmetic.ni"]
+        },
+        {
+            "name": "Launch Nilan Compile REPL (dlv-dap)",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "debugAdapter": "dlv-dap",
+            "console": "integratedTerminal",
+            "args": ["cRepl"]
+        }
+    ]
+}
+
+```
+The launch configuration can be modified as needed, this is just my current setup.
+
+After this the debugger will be ready to be used and breakpoints can be set.
+
+
 
 
 ## References
