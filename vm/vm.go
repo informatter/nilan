@@ -271,7 +271,7 @@ func (vm *VirtualMachine) execArithmeticInstruction(operationFloat arithmeticFun
 			vm.stack.Push(result)
 		}
 		if isAInt && isBFloat {
-			result := operationFloat(float64(aFloatVal), bFloatVal)
+			result := operationFloat(float64(aIntVal), bFloatVal)
 			vm.stack.Push(result)
 		}
 		if isAInt && isBInt {
