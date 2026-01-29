@@ -108,18 +108,7 @@ func TestExecuteBytecodeBinaryOpVMStack(t *testing.T) {
 			},
 			expectedStack: []int64{30},
 		},
-		{
-			bytecode: compiler.Bytecode{
-				Instructions: []byte{
-					byte(compiler.OP_CONSTANT), 0, 0,
-					byte(compiler.OP_CONSTANT), 0, 1,
-					byte(compiler.OP_DIVIDE),
-					byte(compiler.OP_END),
-				},
-				ConstantsPool: []any{int64(4), int64(2)},
-			},
-			expectedStack: []int64{2},
-		},
+
 		{
 			bytecode: compiler.Bytecode{
 				Instructions: []byte{
@@ -183,6 +172,54 @@ func TestExecuteBytecodeBinaryOpFloatVMStack(t *testing.T) {
 				ConstantsPool: []any{float64(5.3), float64(3.65)},
 			},
 			expectedStack: []float64{8.95},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_DIVIDE),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(9), int64(2)},
+			},
+			expectedStack: []float64{4.5},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_DIVIDE),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(4), int64(2)},
+			},
+			expectedStack: []float64{2.0},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_DIVIDE),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(10.55), float64(3.04)},
+			},
+			expectedStack: []float64{3.4703947368421053},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_DIVIDE),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(5.544), float64(21.943)},
+			},
+			expectedStack: []float64{0.25265460511324794},
 		},
 	}
 
