@@ -9,6 +9,7 @@ import (
 
 	"nilan/compiler"
 	"nilan/lexer"
+	"nilan/parser"
 	"nilan/vm"
 
 	"github.com/google/subcommands"
@@ -55,20 +56,33 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 		if line == "exit" {
 			os.Exit(0)
 		}
+
 		lex := lexer.New(line)
 		tokens, err := lex.Scan()
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		compiler := compiler.New(tokens)
-		bytecode, err := compiler.Compile()
+
+		parser := parser.Make(tokens)
+		statements, parseErrs := parser.Parse()
+		if len(parseErrs) > 0 {
+			fmt.Fprintf(os.Stdout, "Parse error: ")
+			for _, pErr := range parseErrs {
+				fmt.Fprintf(os.Stdout, "%v\n", pErr)
+			}
+			continue
+		}
+
+		astCompiler := compiler.NewASTCompiler()
+		bytecode, err := astCompiler.CompileAST(statements)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
 			continue
 		}
+
 		if cmd.diassemble {
-			_, err := compiler.DiassembleBytecode(true, "")
+			_, err := astCompiler.DiassembleBytecode(true, "")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "💥 Bytecode diassemble error:\n:\t%s", err.Error())
 				continue
@@ -76,11 +90,12 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 
 		}
 		if cmd.dumpBytecode {
-			err := compiler.DumpBytecode("")
+			err := astCompiler.DumpBytecode("")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "💥 Dump bytecode error:\n:\t%s", err.Error())
 			}
 		}
+
 		vm := vm.New()
 		runtimeErr := vm.Run(bytecode)
 		if runtimeErr != nil {
