@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"nilan/compiler"
 	"nilan/lexer"
+	"nilan/parser"
 	"os"
 	"strings"
 
@@ -51,21 +52,31 @@ func (r *emitBytecodeCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...int
 		fmt.Fprintf(os.Stderr, "Lexing error: %v\n", err)
 		return subcommands.ExitFailure
 	}
-	compiler := compiler.New(tokens)
 
-	_, cErr := compiler.Compile()
+	parser := parser.Make(tokens)
+	statements, parseErrs := parser.Parse()
+	if len(parseErrs) > 0 {
+		fmt.Fprintf(os.Stderr, "💥 Parsing error:\n")
+		for _, pErr := range parseErrs {
+			fmt.Fprintf(os.Stderr, "\t%v\n", pErr)
+		}
+		return subcommands.ExitFailure
+	}
+
+	astCompiler := compiler.NewASTCompiler()
+	_, cErr := astCompiler.CompileAST(statements)
 
 	if cErr != nil {
-		fmt.Fprintf(os.Stderr, "💥 File not provided\n")
+		fmt.Fprintf(os.Stderr, "💥 Compilation error:\n\t%v\n", cErr)
 		return subcommands.ExitFailure
 	}
 
 	if r.diassemble {
 		parts := strings.Split(nilanFile, ".")
 		fileName := parts[0]
-		compiler.DumpBytecode(fileName)
+		astCompiler.DumpBytecode(fileName)
 
-		_, dErr := compiler.DiassembleBytecode(true, fileName)
+		_, dErr := astCompiler.DiassembleBytecode(true, fileName)
 		if dErr != nil {
 			fmt.Fprintf(os.Stderr, "💥 Bytecode diassemble error:\n:\t%s", dErr.Error())
 			return subcommands.ExitFailure
@@ -75,7 +86,7 @@ func (r *emitBytecodeCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...int
 	if r.dumpBytecode {
 		parts := strings.Split(nilanFile, ".")
 		fileName := parts[0]
-		err := compiler.DumpBytecode(fileName)
+		err := astCompiler.DumpBytecode(fileName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "💥 Dump bytecode error:\n:\t%s", err.Error())
 			return subcommands.ExitFailure
