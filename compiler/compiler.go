@@ -5,6 +5,7 @@ package compiler
 import (
 	"encoding/binary"
 	"fmt"
+	"nilan/ast"
 	"nilan/token"
 	"os"
 	"strings"
@@ -33,6 +34,8 @@ type parseRule struct {
 // Represents the compiler which will compile
 // a stream of `Token`'s to `Bytecode` to be executed
 // by the VM
+// NOTE: This compiler will be deleted in the future and only the
+// AST compiler will remain.
 type Compiler struct {
 	bytecode     Bytecode
 	readPosition int32
@@ -332,4 +335,219 @@ func (c *Compiler) addConstant(value any) {
 func (c *Compiler) emit(opcode Opcode, operands ...int) {
 	instruction := AssembleInstruction(opcode, operands...)
 	c.bytecode.Instructions = append(c.bytecode.Instructions, instruction...)
+}
+
+// ASTCompiler is a visitor that compiles AST nodes directly to bytecode.
+// It implements both ast.ExpressionVisitor and ast.StmtVisitor interfaces
+// to traverse and compile the abstract syntax tree to bytecode.
+type ASTCompiler struct {
+	bytecode Bytecode
+}
+
+// NewASTCompiler creates a new AST-to-bytecode compiler.
+func NewASTCompiler() *ASTCompiler {
+	return &ASTCompiler{
+		bytecode: Bytecode{
+			Instructions:  Instructions{},
+			ConstantsPool: []any{},
+		},
+	}
+}
+
+// DumpBytecode writes the compiled bytecode to a file with a `.nic` extension.
+// The bytecode is encoded as hexadecimal so it can be viewed in a text editor.
+func (ac *ASTCompiler) DumpBytecode(filePath string) error {
+	if filePath == "" {
+		filePath = "bytecode.nic"
+	} else {
+		filePath = filePath + ".nic"
+	}
+	fDescriptor, err := os.Create(filePath)
+	if err != nil {
+		return fmt.Errorf("error creating nilan bytecode file: %s", err.Error())
+	}
+
+	encoded := fmt.Sprintf("%x", ac.bytecode.Instructions)
+	fDescriptor.Write([]byte(encoded))
+	defer fDescriptor.Close()
+	return nil
+}
+
+// DiassembleBytecode disassembles the compiled bytecode to a human readable format
+// and optionally saves it to disk.
+// It returns the disassembled bytecode as a string or an error if the file could not be created.
+func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (string, error) {
+	var diassembledBytecode string
+	var builder strings.Builder
+	var instructionLength int
+	totalInstructions := len(ac.bytecode.Instructions) - 1
+	ip := 0
+
+	// NOTE: Slicing in go includes the first element, but excludes the last one.
+	// for example, [0:4] will include index 0 to index 3 of the array.
+	for ip <= totalInstructions {
+		opCode := Opcode(ac.bytecode.Instructions[ip])
+		switch opCode {
+		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_END:
+
+			result, err := DiassembleInstruction([]byte{ac.bytecode.Instructions[ip]})
+			if err != nil {
+				panic(err.Error())
+			}
+			builder.WriteString(result)
+			if opCode == OP_END {
+				break
+			}
+			builder.WriteString("\n")
+			instructionLength = OPCODE_TOTAL_BYTES
+
+		case OP_CONSTANT:
+			offset := ip + OP_CONSTANT_TOTAL_BYTES
+			instruction := ac.bytecode.Instructions[ip:offset]
+			index := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
+			value := ac.bytecode.ConstantsPool[index]
+
+			diassembledInstr, err := DiassembleInstruction(instruction)
+			if err != nil {
+				panic(err.Error())
+			}
+			result := diassembledInstr + fmt.Sprintf(", value: %d", value)
+			builder.WriteString(result)
+			builder.WriteString("\n")
+			instructionLength = OP_CONSTANT_TOTAL_BYTES
+
+		}
+
+		ip += instructionLength
+	}
+	diassembledBytecode = builder.String()
+	if saveToDisk {
+		if filePath == "" {
+			filePath = "bytecode.dnic"
+		} else {
+			filePath = filePath + ".dnic"
+		}
+		fDescriptor, err := os.Create(filePath)
+		if err != nil {
+			return "", fmt.Errorf("error creating diassembled bytecode file: %s", err.Error())
+		}
+		fDescriptor.WriteString(diassembledBytecode)
+		defer fDescriptor.Close()
+	}
+	return diassembledBytecode, nil
+}
+
+// CompileAST compiles a slice of AST statements to bytecode.
+// Currently, it only processes ExpressionStmt nodes containing arithmetic expressions.
+// Other statement types (assignments, variables, control flow) are skipped.
+func (ac *ASTCompiler) CompileAST(statements []ast.Stmt) (Bytecode, error) {
+	for _, stmt := range statements {
+
+		if exprStmt, ok := stmt.(ast.ExpressionStmt); ok {
+			exprStmt.Expression.Accept(ac)
+		}
+		// TODO: Handle other statement types (VarStmt, IfStmt, WhileStmt ... etc)
+	}
+	ac.emit(OP_END)
+	return ac.bytecode, nil
+}
+
+// VisitBinary handles binary expressions (arithmetic operators: +, -, *, /)
+func (ac *ASTCompiler) VisitBinary(binary ast.Binary) any {
+
+	// NOTE: Left expression is compiled first to ensure correct evaluation order
+	binary.Left.Accept(ac)
+	binary.Right.Accept(ac)
+
+	switch binary.Operator.TokenType {
+	case token.ADD:
+		ac.emit(OP_ADD)
+	case token.SUB:
+		ac.emit(OP_SUBTRACT)
+	case token.MULT:
+		ac.emit(OP_MULTIPLY)
+	case token.DIV:
+		ac.emit(OP_DIVIDE)
+	}
+	return nil
+}
+
+// VisitUnary handles unary expressions (operators: -, !)
+func (ac *ASTCompiler) VisitUnary(unary ast.Unary) any {
+
+	unary.Right.Accept(ac)
+
+	switch unary.Operator.TokenType {
+	case token.SUB:
+		ac.emit(OP_NEGATE)
+	case token.BANG:
+		ac.emit(OP_NEGATE)
+	}
+	return nil
+}
+
+// VisitLiteral handles literal values (numbers, strings, booleans, null)
+func (ac *ASTCompiler) VisitLiteral(literal ast.Literal) any {
+	ac.addConstant(literal.Value)
+	return nil
+}
+
+// VisitGrouping handles parenthesized expressions
+func (ac *ASTCompiler) VisitGrouping(grouping ast.Grouping) any {
+	// Recursively compile the inner expression
+	grouping.Expression.Accept(ac)
+	return nil
+}
+
+func (ac *ASTCompiler) VisitVariableExpression(variable ast.Variable) any {
+	panic("Variables not yet supported in bytecode compilation")
+}
+
+func (ac *ASTCompiler) VisitAssignExpression(assign ast.Assign) any {
+
+	panic("Assignment not yet supported in bytecode compilation")
+}
+
+func (ac *ASTCompiler) VisitLogicalExpression(logical ast.Logical) any {
+
+	panic("Logical operations not yet supported in bytecode compilation")
+}
+
+// VisitExpressionStmt is not directly called; handled by CompileAST
+func (ac *ASTCompiler) VisitExpressionStmt(exprStmt ast.ExpressionStmt) any {
+	exprStmt.Expression.Accept(ac)
+	return nil
+}
+
+func (ac *ASTCompiler) VisitPrintStmt(printStmt ast.PrintStmt) any {
+	panic("Print statements not yet supported in bytecode compilation")
+}
+
+func (ac *ASTCompiler) VisitVarStmt(varStmt ast.VarStmt) any {
+	panic("Variable declarations not yet supported in bytecode compilation")
+}
+
+func (ac *ASTCompiler) VisitBlockStmt(blockStmt ast.BlockStmt) any {
+	panic("Block statements not yet supported in bytecode compilation")
+}
+
+func (ac *ASTCompiler) VisitIfStmt(ifStmt ast.IfStmt) any {
+	panic("If statements not yet supported in bytecode compilation")
+}
+
+func (ac *ASTCompiler) VisitWhileStmt(whileStmt ast.WhileStmt) any {
+	panic("While statements not yet supported in bytecode compilation")
+}
+
+// addConstant appends a value to the constant pool and emits an OP_CONSTANT instruction
+func (ac *ASTCompiler) addConstant(value any) {
+	ac.bytecode.ConstantsPool = append(ac.bytecode.ConstantsPool, value)
+	index := len(ac.bytecode.ConstantsPool) - 1
+	ac.emit(OP_CONSTANT, index)
+}
+
+// emit constructs a bytecode instruction and appends it to the instruction stream
+func (ac *ASTCompiler) emit(opcode Opcode, operands ...int) {
+	instruction := AssembleInstruction(opcode, operands...)
+	ac.bytecode.Instructions = append(ac.bytecode.Instructions, instruction...)
 }
