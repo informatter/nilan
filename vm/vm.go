@@ -33,6 +33,7 @@ func divFloat(a float64, b float64) float64 {
 }
 func divInt(a int64, b int64) int64 {
 	// TODO: Add runtime error division by zero
+
 	return a / b
 }
 
@@ -148,6 +149,7 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 	var instructionLength int
 	for {
 		opCode := compiler.Opcode(bytecode.Instructions[vm.ip])
+		intOpCode := int(opCode)
 
 		switch opCode {
 		case compiler.OP_END:
@@ -156,25 +158,25 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 		case compiler.OP_CONSTANT:
 			instructionLength = vm.execConstantInstruction(bytecode)
 		case compiler.OP_ADD:
-			l, err := vm.execArithmeticInstruction(addFloat, addInt)
+			l, err := vm.execArithmeticInstruction(addFloat, addInt, intOpCode)
 			if err != nil {
 				return err
 			}
 			instructionLength = l
 		case compiler.OP_SUBTRACT:
-			l, err := vm.execArithmeticInstruction(subFloat, subInt)
+			l, err := vm.execArithmeticInstruction(subFloat, subInt, intOpCode)
 			if err != nil {
 				return err
 			}
 			instructionLength = l
 		case compiler.OP_MULTIPLY:
-			l, err := vm.execArithmeticInstruction(multFloat, multInt)
+			l, err := vm.execArithmeticInstruction(multFloat, multInt, intOpCode)
 			if err != nil {
 				return err
 			}
 			instructionLength = l
 		case compiler.OP_DIVIDE:
-			l, err := vm.execArithmeticInstruction(divFloat, divInt)
+			l, err := vm.execArithmeticInstruction(divFloat, divInt, intOpCode)
 			if err != nil {
 				return err
 			}
@@ -221,12 +223,13 @@ func (vm *VirtualMachine) execConstantInstruction(bytecode compiler.Bytecode) in
 // Parameters:
 //   - operationFloat: Function handling arithmetic between floating-point values.
 //   - operationInt:   Function handling arithmetic between integer values.
+//   - opCode:         The opcode representing the arithmetic operation.
 //
 // Returns:
 //   - int: The number of bytes consumed by the instruction, used to advance the
 //     instruction pointer.
 //   - error: A RuntimeError if operand types are invalid, otherwise nil.
-func (vm *VirtualMachine) execArithmeticInstruction(operationFloat arithmeticFuncFloat, operationInt arithmeticFuncInt) (int, error) {
+func (vm *VirtualMachine) execArithmeticInstruction(operationFloat arithmeticFuncFloat, operationInt arithmeticFuncInt, opCode int) (int, error) {
 	b := vm.stack.Pop()
 	a := vm.stack.Pop()
 
@@ -275,8 +278,13 @@ func (vm *VirtualMachine) execArithmeticInstruction(operationFloat arithmeticFun
 			vm.stack.Push(result)
 		}
 		if isAInt && isBInt {
-			result := operationInt(aIntVal, bIntVal)
-			vm.stack.Push(result)
+			if opCode == int(compiler.OP_DIVIDE) {
+				result := operationFloat(float64(aIntVal), float64(bIntVal))
+				vm.stack.Push(result)
+			} else {
+				result := operationInt(aIntVal, bIntVal)
+				vm.stack.Push(result)
+			}
 		}
 	}
 
