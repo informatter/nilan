@@ -4,12 +4,35 @@
 Nilan is a programming language I am currently developing for fun 🚀, implemented in Go.
 My goal is to learn more about how programming languages work under the hood and to explore the different pipelines involved — from taking source code as input to making the CPU execute instructions 🤖.
 
-ℹ️ At the moment, I have decided to stop working on the tree-walk interpreter and parser. Instead I am starting to develop the compiler and the VM. I will compile the tokens into bytecode and then have a virtual machine which executes the bytecode. For the moment, Nilan language will no longer have an Abstract Syntax Tree (AST). 
+ℹ️ The project has transitioned from a tree-walk interpreter to a compiler-based architecture. The tree-walk interpreter and parser (AST generator) are now **deprecated**. The current development focuses on the **ASTCompiler** which compiles AST nodes to bytecode executed by a stack-based **Virtual Machine (VM)**.
 
+## Architecture
+
+The language now follows a traditional compiler pipeline:
+
+```
+Source Code → Lexer → Tokens → Parser → AST → ASTCompiler → Bytecode → VM
+```
 
 ## Features
 
+### ASTCompiler + VM (Current) ✅
+
 ✅ Arithmetic expressions: `+`, `-`, `*`, `/`
+
+✅ Unary negation: `-x` (bytecode generation)
+
+✅ Literal values: integers and floats
+
+✅ Grouped expressions: `(a + b) * c`
+
+✅ REPL (Read-Eval-Print Loop) for interactive testing
+
+✅ Execute source code from a file (via `emit` command)
+
+### Tree-Walk Interpreter (Deprecated) ⚠️
+
+The following features were implemented in the tree-walk interpreter but are **not yet** supported in the ASTCompiler + VM:
 
 ✅ Lexical scope
 
@@ -25,8 +48,6 @@ My goal is to learn more about how programming languages work under the hood and
 
 ✅ Logical operators: `and`, `or`
 
-✅ Boolean literals: `true`, `false`
-
 ✅ `null` literal
 
 ✅ Parenthesized expressions
@@ -35,15 +56,39 @@ My goal is to learn more about how programming languages work under the hood and
 
 ✅ Assignment statements (e.g., `var a = 2`)
 
-✅ Unary operations: logical not `!`, negation `-`
-
-✅ REPL (Read-Eval-Print Loop) for interactive testing
-
-✅ Execute source code from a file.
+✅ Unary operations: logical not `!`
 
 ## Limitations
 
-The following are **not supported** yet:
+### ASTCompiler + VM (Current) 🔴
+
+The following features are **not yet supported** in the compiled version:
+
+🔴 Variables and variable declarations
+
+🔴 Assignments
+
+🔴 Lexical and block scope
+
+🔴 Comparison operators: `>`, `>=`, `<`, `<=`, `==`, `!=`
+
+🔴 Boolean literals and operations: `true`, `false`, `and`, `or`, `!`
+
+🔴 String literals and string operations
+
+🔴 Control flow: `if`, `else`, `while` loops
+
+🔴 Print statements
+
+🔴 Unary logical not `!`
+
+🔴 Functions and function calls
+
+🔴 Classes, structs, interfaces
+
+### Tree-Walk Interpreter (Deprecated) 🔴
+
+The following are **not supported** in the tree-walk interpreter (and are not planned):
 
 🔴 Functions and function calls
 
@@ -55,19 +100,11 @@ The following are **not supported** yet:
 
 🔴 Control flow: loops, `else if`, `break`
 
-🔴 Logical operators: `not`
-
 🔴 Exponentiation or other advanced operators
-
-🔴 Tree-Walk interpreter
 
 🔴 Complex features such as Module/package imports, etc ...
 
-## TODOs
-- Implement existing language features in tree-walk interpreter and parser (AST generator) into the compiler and VM 👷 (In progress)
-- Add suppor for `else if`, `break`
-- Add support for functions and function calls.
-- Add support for structs.
+
 
 
 ## Current Syntactic Grammar (ISO EBNF)
@@ -353,56 +390,65 @@ cd nilan
 go install .
 ```
 
-## Usage Tree-walk interpreter version
+> 💡 If changes are made to the code, run `go install .` again to create a new binary with the updates.
+> 
+> For iterative development, use: `go run . -- cRepl` or `go run . -- emit <file-name>`
 
-Once installed there are three main commands than can be used. The first two are still based of the tree-walk interpreter and the third command now uses the compiled version of nilan that is under development.
+## Usage
 
-**1. REPL**
+### Compiled Version (ASTCompiler + VM)
 
-Start a REPL session
-```bash
-nilan repl
-```
+**1. Emit Bytecode**
 
-**2. Run**
-
-Compiles the specified file and executes it directly
-```bash
-nilan run hellow_world.ni
-```
-
-💡If changes are made to the code, run `go install .` once again so a new binary is created with the new changes.
-
-For iterative development is recommended to simply run:
-
-`go run . -- repl` **or** `go run . -- run <file-name>`
-
-## Usage compiled version
-
-**1. Emit**
-
-Emits the bytecode representation, or the diassembled bytecode representation from a nilan source code file. This command is useful for debugging purposes when developing the compiler.
+Generates and optionally disassembles bytecode from a Nilan source file. Useful for debugging the compiler.
 
 ```bash
 nilan emit arithmetic.ni
 ```
+
+Optional flags:
+- `-diassemble=true`: Output human-readable disassembled bytecode (default: true)
+- `-dumpBytecode=true`: Output hex-encoded bytecode to `.nic` file (default: true)
+
 **2. REPL**
 
-Start a REPL session, optionally write the encoded bytecode as hexadecimal to a .nic file or diassemble the bytecode and dump it to a .dnic file
+Interactive REPL session for testing arithmetic expressions:
 
 ```bash
 nilan cRepl
 ```
 
-To see all available flags:
-```bash
-nilan cRepl --help
+Optional flags:
+- `-diassemble=false`: Disassemble bytecode after each expression (default: false)
+- `-dumpBytecode=false`: Dump hex bytecode to `.nic` file (default: false)
+
+Example:
 ```
-💡If changes are made to the code, run `go install .` once again so a new binary is created with the new changes.
+>>> 5 + 3
+8
+>>> 2 * 4
+8
+>>> 10 / 2
+5
+```
 
-For iterative development is recommended to simply run:
+### Tree-Walk Interpreter (Deprecated)
 
-`go run . -- cRepl` **or** `go run . -- emit <file-name>`
+The following commands are still available but use the deprecated tree-walk interpreter:
+
+**1. Run**
+
+Executes a Nilan source file:
+```bash
+nilan run hellow_world.ni
+```
+
+**2. REPL**
+
+Interactive REPL session:
+```bash
+nilan repl
+```
 
 
 ### Testing
