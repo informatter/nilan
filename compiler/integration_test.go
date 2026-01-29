@@ -60,13 +60,11 @@ func TestFullPipeline(t *testing.T) {
 				t.Fatalf("lexing failed: %v", err)
 			}
 
-
 			parser := parser.Make(tokens)
 			statements, parseErrors := parser.Parse()
 			if len(parseErrors) > 0 {
 				t.Fatalf("parsing failed: %v", parseErrors[0])
 			}
-
 
 			compiler := NewASTCompiler()
 			bytecode, err := compiler.CompileAST(statements)
