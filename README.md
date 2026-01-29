@@ -456,7 +456,7 @@ nilan repl
 Run tests for a specific package, e.g., lexer:
 
 ```bash
-go test ./lexer
+go test ./compiler
 ```
 
 Run all unit tests recursively:
@@ -465,13 +465,19 @@ Run all unit tests recursively:
 go test ./...
 ```
 
+Run a particular integration test:
+
+```bash
+go test ./compiler -v -run TestFullPipeline
+```
+
 
 ### Linting and Formatting
 
 Format a particular package:
 
 ```bash
-go fmt ./lexer
+go fmt ./compiler
 ```
 
 Format all Go files:
