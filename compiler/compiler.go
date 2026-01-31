@@ -481,7 +481,7 @@ func (ac *ASTCompiler) VisitUnary(unary ast.Unary) any {
 	case token.SUB:
 		ac.emit(OP_NEGATE)
 	case token.BANG:
-		ac.emit(OP_NEGATE)
+		ac.emit(OP_NOT)
 	}
 	return nil
 }
