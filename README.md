@@ -316,7 +316,7 @@ Result:
 - Add `1 + (2 * 3)`
 
 
-### AST Structure (Obsolete)
+### AST Structure
 
 ```
    +
