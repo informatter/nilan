@@ -7,12 +7,10 @@ import (
 
 func assertResults(tests []struct {
 	bytecode      compiler.Bytecode
-	expectedStack []float64
+	expectedStack any
 }, t *testing.T) {
-
 	t.Helper()
 	for _, tt := range tests {
-
 		vm := New()
 		err := vm.Run(tt.bytecode)
 		if err != nil {
@@ -21,9 +19,39 @@ func assertResults(tests []struct {
 		if len(vm.stack) == 0 {
 			t.Errorf("vm stack should not be empty")
 		}
+
+		// Ensure expectedStack has correct length
+		expStack, ok := tt.expectedStack.([]any)
+		if !ok {
+			t.Errorf("expectedStack must be []any containing float64 or int64")
+			continue
+		}
+		if len(vm.stack) != len(expStack) {
+			t.Errorf("stack length mismatch: got %d, want %d", len(vm.stack), len(expStack))
+			continue
+		}
+
 		for i := 0; i < len(vm.stack); i++ {
-			if vm.stack[i] != tt.expectedStack[i] {
-				t.Errorf("vm stack at index: %d - got: %f, want: %f", i, vm.stack[i], tt.expectedStack[i])
+			expected := expStack[i]
+			actual := vm.stack[i]
+			if actual != expected {
+				t.Errorf("vm stack at index: %d - got: %d, want: %d", i, actual, expected)
+			}
+			switch exp := expected.(type) {
+			case float64:
+				if actual != exp {
+					t.Errorf("stack[%d]: got %f, want %f", i, actual, exp)
+				}
+			case int64:
+				if actual != exp {
+					t.Errorf("stack[%d]: got %d, want %d", i, actual, exp)
+				}
+			case bool:
+				if actual != exp {
+					t.Errorf("stack[%d]: got %t, want %t", i, actual, exp)
+				}
+			default:
+				t.Errorf("stack[%d]: unsupported expected type %T", i, expected)
 			}
 		}
 	}
@@ -33,7 +61,7 @@ func TestExecuteBytecodeVMStack(t *testing.T) {
 
 	tests := []struct {
 		bytecode      compiler.Bytecode
-		expectedStack []int64
+		expectedStack any
 	}{
 		{
 			bytecode: compiler.Bytecode{
@@ -44,27 +72,18 @@ func TestExecuteBytecodeVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{int64(5), int64(1)},
 			},
-			expectedStack: []int64{5, 1},
+			expectedStack: []any{int64(5), int64(1)},
 		},
 	}
 
-	for _, tt := range tests {
-
-		vm := New()
-		vm.Run(tt.bytecode)
-		for i := 0; i < len(vm.stack); i++ {
-			if vm.stack[i] != tt.expectedStack[i] {
-				t.Errorf("vm stack at index: %d - got: %d, want: %d", i, vm.stack[i], tt.expectedStack[i])
-			}
-		}
-	}
+	assertResults(tests, t)
 }
 
 func TestExecuteBytecodeBinaryOpVMStack(t *testing.T) {
 
 	tests := []struct {
 		bytecode      compiler.Bytecode
-		expectedStack []int64
+		expectedStack any
 	}{
 		{
 			bytecode: compiler.Bytecode{
@@ -76,7 +95,7 @@ func TestExecuteBytecodeBinaryOpVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{int64(5), int64(1)},
 			},
-			expectedStack: []int64{6},
+			expectedStack: []any{int64(6)},
 		},
 		{
 			bytecode: compiler.Bytecode{
@@ -92,7 +111,7 @@ func TestExecuteBytecodeBinaryOpVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{int64(5), int64(1), int64(3), int64(10)},
 			},
-			expectedStack: []int64{19},
+			expectedStack: []any{int64(19)},
 		},
 		{
 			bytecode: compiler.Bytecode{
@@ -106,7 +125,7 @@ func TestExecuteBytecodeBinaryOpVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{int64(5), int64(3), int64(2)},
 			},
-			expectedStack: []int64{30},
+			expectedStack: []any{int64(30)},
 		},
 
 		{
@@ -121,33 +140,18 @@ func TestExecuteBytecodeBinaryOpVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{int64(5), int64(3), int64(2)},
 			},
-			expectedStack: []int64{0},
+			expectedStack: []any{int64(0)},
 		},
 	}
 
-	for _, tt := range tests {
-
-		vm := New()
-		err := vm.Run(tt.bytecode)
-		if err != nil {
-			t.Error(err.Error())
-		}
-		if len(vm.stack) == 0 {
-			t.Errorf("vm stack should not be empty")
-		}
-		for i := 0; i < len(vm.stack); i++ {
-			if vm.stack[i] != tt.expectedStack[i] {
-				t.Errorf("vm stack at index: %d - got: %d, want: %d", i, vm.stack[i], tt.expectedStack[i])
-			}
-		}
-	}
+	assertResults(tests, t)
 }
 
 func TestExecuteBytecodeBinaryOpFloatVMStack(t *testing.T) {
 
 	tests := []struct {
 		bytecode      compiler.Bytecode
-		expectedStack []float64
+		expectedStack any
 	}{
 		{
 			bytecode: compiler.Bytecode{
@@ -159,7 +163,7 @@ func TestExecuteBytecodeBinaryOpFloatVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{float64(5.3), int64(3)},
 			},
-			expectedStack: []float64{8.3},
+			expectedStack: []any{float64(8.3)},
 		},
 		{
 			bytecode: compiler.Bytecode{
@@ -171,7 +175,7 @@ func TestExecuteBytecodeBinaryOpFloatVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{float64(5.3), float64(3.65)},
 			},
-			expectedStack: []float64{8.95},
+			expectedStack: []any{float64(8.95)},
 		},
 		{
 			bytecode: compiler.Bytecode{
@@ -183,7 +187,7 @@ func TestExecuteBytecodeBinaryOpFloatVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{int64(9), int64(2)},
 			},
-			expectedStack: []float64{4.5},
+			expectedStack: []any{float64(4.5)},
 		},
 		{
 			bytecode: compiler.Bytecode{
@@ -195,7 +199,7 @@ func TestExecuteBytecodeBinaryOpFloatVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{int64(4), int64(2)},
 			},
-			expectedStack: []float64{2.0},
+			expectedStack: []any{float64(2.0)},
 		},
 		{
 			bytecode: compiler.Bytecode{
@@ -207,7 +211,7 @@ func TestExecuteBytecodeBinaryOpFloatVMStack(t *testing.T) {
 				},
 				ConstantsPool: []any{float64(10.55), float64(3.04)},
 			},
-			expectedStack: []float64{3.4703947368421053},
+			expectedStack: []any{float64(3.4703947368421053)},
 		},
 		{
 			bytecode: compiler.Bytecode{
@@ -217,9 +221,64 @@ func TestExecuteBytecodeBinaryOpFloatVMStack(t *testing.T) {
 					byte(compiler.OP_DIVIDE),
 					byte(compiler.OP_END),
 				},
-				ConstantsPool: []any{float64(5.544), float64(21.943)},
+				ConstantsPool: []any{5.544, 21.943},
 			},
-			expectedStack: []float64{0.25265460511324794},
+			expectedStack: []any{0.25265460511324794},
+		},
+	}
+
+	assertResults(tests, t)
+}
+
+func TestExecuteBytecodeNegateOpVMStack(t *testing.T) {
+
+	tests := []struct {
+		bytecode      compiler.Bytecode
+		expectedStack any
+	}{
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_NEGATE),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(10)},
+			},
+			expectedStack: []any{int64(-10)},
+		},
+	}
+
+	assertResults(tests, t)
+}
+
+func TestExecuteBytecodeNotOpVMStack(t *testing.T) {
+
+	tests := []struct {
+		bytecode      compiler.Bytecode
+		expectedStack any
+	}{
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_NOT),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{bool(true)},
+			},
+			expectedStack: []any{bool(false)},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_NOT),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{bool(false)},
+			},
+			expectedStack: []any{bool(true)},
 		},
 	}
 
