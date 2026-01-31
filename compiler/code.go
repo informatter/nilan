@@ -46,6 +46,7 @@ const (
 	OP_DIVIDE   Opcode = iota
 	OP_SUBTRACT Opcode = iota
 	OP_NEGATE   Opcode = iota
+	OP_NOT      Opcode = iota
 )
 
 // Represents a definition of an opcode.
@@ -66,6 +67,7 @@ var definitions = map[Opcode]*OpCodeDefinition{
 	OP_MULTIPLY: {Name: "OP_MULTIPLY"},
 	OP_DIVIDE:   {Name: "OP_DIVIDE"},
 	OP_NEGATE:   {Name: "OP_NEGATE"},
+	OP_NOT:      {Name: "OP_NOT"},
 }
 
 func Get(op Opcode) (*OpCodeDefinition, error) {
@@ -123,7 +125,7 @@ func AssembleInstruction(op Opcode, operands ...int) []byte {
 		switch op {
 		case OP_CONSTANT:
 			binary.BigEndian.PutUint16(instruction[byteOffset:], uint16(operand))
-		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_END:
+		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END:
 			return instruction
 
 		}
@@ -162,7 +164,7 @@ func DiassembleInstruction(instruction []byte) (string, error) {
 		operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
 		diassembled = fmt.Sprintf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, def.OperandWidths[0])
 
-	case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_END:
+	case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END:
 		diassembled = fmt.Sprintf("opcode: %s, operand: %s, operand widths: %d bytes", def.Name, "None", 0)
 	}
 
