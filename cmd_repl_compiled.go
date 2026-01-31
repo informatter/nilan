@@ -18,6 +18,7 @@ import (
 type replCompiledCmd struct {
 	diassemble   bool
 	dumpBytecode bool
+	printAST     bool
 }
 
 func (*replCompiledCmd) Name() string { return "cRepl" }
@@ -31,8 +32,10 @@ func (*replCompiledCmd) Usage() string {
 func (cmd *replCompiledCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.diassemble, "diassemble", false, "diassemble the bytecode and dump it to a .dnic file")
 	f.BoolVar(&cmd.dumpBytecode, "dumpBytecode", false, "Writes the encoded bytecode as hexadecimal to a .nic file")
+	f.BoolVar(&cmd.printAST, "printAST", false, "Prints the AST to console")
 	f.BoolVar(&cmd.diassemble, "di", false, "Shorthand for diassemble.")
 	f.BoolVar(&cmd.dumpBytecode, "du", false, "Shorthand for dumpBytecode")
+
 }
 
 func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -94,6 +97,9 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "💥 Dump bytecode error:\n:\t%s", err.Error())
 			}
+		}
+		if cmd.printAST {
+			parser.Print(statements)
 		}
 
 		vm := vm.New()
