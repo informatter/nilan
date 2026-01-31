@@ -1,3 +1,5 @@
 alias format='go fmt ./...'
 alias test='go test ./...'
 alias build='go build'
+alias install='go install .'
+alias repl='go run . -- cRepl'
