@@ -73,17 +73,17 @@ func Make(tokens []token.Token) *Parser {
 	}
 }
 
-// Print prints the string representations of a slice of Stmt nodes
-// using the AST printer. Each statement is visited with an astPrinter,
-// and the resulting string is output using fmt.Println.
-//
-// This method does not return any value; its purpose is to output
-// formatted representations of the AST nodes to standard output.
+// Print prints the AST as prettified JSON to standard output.
 func (parser *Parser) Print(statements []ast.Stmt) {
-	for _, s := range statements {
-		result := s.Accept(astPrinter{})
-		fmt.Println(result)
+	_, err := PrintASTJSON(statements)
+	if err != nil {
+		fmt.Println("error producing AST JSON:", err)
 	}
+}
+
+// PrintToFile writes the AST for the provided statements to a .json file at the given path.
+func (parser *Parser) PrintToFile(statements []ast.Stmt, path string) error {
+	return WriteASTJSONToFile(statements, path)
 }
 
 // Peeks the token at the parser's current position,
