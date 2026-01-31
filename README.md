@@ -4,7 +4,7 @@
 Nilan is a programming language I am currently developing for fun 🚀, implemented in Go.
 My goal is to learn more about how programming languages work under the hood and to explore the different pipelines involved — from taking source code as input to making the CPU execute instructions 🤖.
 
-ℹ️ The project has transitioned from a tree-walk interpreter to a compiler-based architecture. The tree-walk interpreter and parser (AST generator) are now **deprecated**. The current development focuses on the **ASTCompiler** which compiles AST nodes to bytecode executed by a stack-based **Virtual Machine (VM)**.
+ℹ️ The project has transitioned from a tree-walk interpreter to a compiler-based architecture. The tree-walk interpreter is now **deprecated**. The current development focuses on the **ASTCompiler** which compiles AST nodes to bytecode executed by a stack-based **Virtual Machine (VM)**.
 
 ## Architecture
 
@@ -366,20 +366,35 @@ These examples will **not parse** correctly with the current grammar:
 ## Extending Nilan
 
 
-1. **Update the Lexer (optional)**
-If new token types need to be introduced, `token.go` and `lexer.go` need to be modified. 
+1. **Update the Lexer (Optional)**
 
-2. **Extend the `ExpressionVisitor` or `StmtVisitor` interfaces
-Depending on the type of new syntax introduced, make sure to add the corresponding visit method to one of the interfaces.
+    If new token types need to be introduced, `token.go` and `lexer.go` need to be modified. 
 
-3. **Add a new AST node to `expressions.go` or `statements.go`
-Depending on the type of new syntax introduced, make sure to add the corresponding AST node `struct` to `expressions.go` or `statements.go` depending if its an expression or statement node.
+2. **Extend the `ExpressionVisitor` or `StmtVisitor` interfaces**
+
+    Depending on the type of new syntax introduced, make sure to add the corresponding visit method to one of the interfaces.
+
+3. **Add a new AST node to `expressions.go` or `statements.go`**
+
+    Depending on the type of new syntax introduced, make sure to add the corresponding AST node `struct` to `expressions.go` or `statements.go` depending if its an expression or statement node.
 
 4. **Extend the Parser**
-Extend the Parser to handle the new syntax grammar by adding a method which creates an AST node.
 
-5. **Extend the Interpreter**
-Extend the interpreter to execute the the new AST node returned by the parser. This will involve implementing the method added to the `ExpressionVisitor` or `StmtVisitor` interfaces
+    Extend the Parser to handle the new syntax grammar by adding a method which creates an AST node.
+
+6. **Extend the compiler**
+
+    a. Add a new opcode (`code.go`) and handle diassembling and assembling the opcode
+
+    b. Extend the compiler to compile the new AST node(s) to bytecode
+
+7. **Extend the VM**
+
+    Extend the vm to execute the new bytecode instruction(s)
+
+8. **Extend the AST Printer (Optional)**
+
+    Extend the AST Printer by adding the corresponding visitor method to handle the new AST node.
 
 
 ## Installation
@@ -391,8 +406,6 @@ go install .
 ```
 
 > 💡 If changes are made to the code, run `go install .` again to create a new binary with the updates.
-> 
-> For iterative development, use: `go run . -- cRepl` or `go run . -- emit <file-name>`
 
 ## Usage
 
@@ -406,9 +419,9 @@ Generates and optionally disassembles bytecode from a Nilan source file. Useful 
 nilan emit arithmetic.ni
 ```
 
-Optional flags:
-- `-diassemble=true`: Output human-readable disassembled bytecode (default: true)
-- `-dumpBytecode=true`: Output hex-encoded bytecode to `.nic` file (default: true)
+```bash
+nilan emit --help
+```
 
 **2. REPL**
 
@@ -418,21 +431,14 @@ Interactive REPL session for testing arithmetic expressions:
 nilan cRepl
 ```
 
-Optional flags:
-- `-diassemble=false`: Disassemble bytecode after each expression (default: false)
-- `-dumpBytecode=false`: Dump hex bytecode to `.nic` file (default: false)
+To see all available commands:
 
-Example:
-```
->>> 5 + 3
-8
->>> 2 * 4
-8
->>> 10 / 2
-5
+```bash
+nilan cRepl --help
 ```
 
-💡To invoke the CLI commands during development (to not build the binary) use `go run` before the command, e.g `go run nilan cRepl` This way after any code changes, the command can run with the updated code, without needing to build the binary.
+> 💡 For iterative development, use: `go run . -- cRepl` or `go run . -- emit <file-name>` ... etc so any CLI tool can be used without needing to build a binary.
+
 
 ### Tree-Walk Interpreter (Deprecated)
 
@@ -495,6 +501,7 @@ source .aliases
 format
 build
 test
+repl ## NOTE: Uses the compiled version of Nilan by default
 ```
 
 ### Using the debugger
