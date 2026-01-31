@@ -157,6 +157,7 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 			return nil
 		case compiler.OP_CONSTANT:
 			instructionLength = vm.execConstantInstruction(bytecode)
+
 		case compiler.OP_ADD:
 			l, err := vm.execArithmeticInstruction(addFloat, addInt, intOpCode)
 			if err != nil {
@@ -181,6 +182,13 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 				return err
 			}
 			instructionLength = l
+
+		case compiler.OP_NEGATE, compiler.OP_NOT:
+			l, err := vm.execUnaryInstruction(opCode)
+			if err != nil {
+				return err
+			}
+			instructionLength = l
 		default:
 			// NOTE: This should only happen in development mode.
 			return fmt.Errorf("unknown opcode %v at ip %d", opCode, vm.ip)
@@ -188,6 +196,43 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 
 		vm.ip += instructionLength
 	}
+}
+
+// Executes a unary operations and pushes the result onto the VM's stack.
+func (vm *VirtualMachine) execUnaryInstruction(opCode compiler.Opcode) (int, error) {
+	value := vm.stack.Pop()
+	if value == nil {
+		return 0, RuntimeError{Message: "stack underflow on unary operation"}
+	}
+
+	if opCode == compiler.OP_NEGATE {
+		if isFloat(value) {
+			val, err := literalToFloat64(value)
+			if err != nil {
+				return 0, RuntimeError{Message: err.Error()}
+			}
+			vm.stack.Push(-val)
+		}
+
+		val, err := literalToInt64(value)
+		if err != nil {
+			return 0, RuntimeError{Message: err.Error()}
+		}
+		vm.stack.Push(-val)
+
+	}
+
+	if opCode == compiler.OP_NOT {
+		switch v := value.(type) {
+		case bool:
+			vm.stack.Push(!v)
+		default:
+			// non-nil, non-falsey values are truthy -> !truthy == false
+			vm.stack.Push(false)
+		}
+	}
+
+	return compiler.OPCODE_TOTAL_BYTES, nil
 }
 
 // Fetches and pushes a constant value from the bytecode
