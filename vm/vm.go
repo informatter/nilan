@@ -153,8 +153,16 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 
 		switch opCode {
 		case compiler.OP_END:
-			fmt.Println(vm.stack.Peek()) // temporary code just for viz
+			if vm.stack.Peek() != nil {
+				// NOTE temp code to handle operations such as 2+2 to be printed in the REPL
+				// Can there be a more suitable place to handle this other than in the VM?
+				// for now it does not hurt to leave it here...
+				fmt.Println(vm.stack.Peek())
+			}
 			return nil
+		case compiler.OP_PRINT:
+			l := vm.execPrintInstruction()
+			instructionLength = l
 		case compiler.OP_CONSTANT:
 			instructionLength = vm.execConstantInstruction(bytecode)
 
@@ -196,6 +204,17 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 
 		vm.ip += instructionLength
 	}
+}
+
+func (vm *VirtualMachine) execPrintInstruction() int {
+	value := vm.stack.Pop()
+	if value == nil {
+		fmt.Println("null")
+		return compiler.OPCODE_TOTAL_BYTES
+	}
+
+	fmt.Println(value)
+	return compiler.OPCODE_TOTAL_BYTES
 }
 
 // Executes a unary operations and pushes the result onto the VM's stack.
