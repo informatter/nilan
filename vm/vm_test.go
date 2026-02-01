@@ -16,11 +16,7 @@ func assertResults(tests []struct {
 		if err != nil {
 			t.Error(err.Error())
 		}
-		if len(vm.stack) == 0 {
-			t.Errorf("vm stack should not be empty")
-		}
 
-		// Ensure expectedStack has correct length
 		expStack, ok := tt.expectedStack.([]any)
 		if !ok {
 			t.Errorf("expectedStack must be []any containing float64 or int64")
@@ -279,6 +275,35 @@ func TestExecuteBytecodeNotOpVMStack(t *testing.T) {
 				ConstantsPool: []any{bool(false)},
 			},
 			expectedStack: []any{bool(true)},
+		},
+	}
+
+	assertResults(tests, t)
+}
+
+func TestExecuteBytecodePrintStatement(t *testing.T) {
+	tests := []struct {
+		bytecode      compiler.Bytecode
+		expectedStack any
+	}{
+		{
+			bytecode: compiler.Bytecode{
+				Instructions:  []byte{byte(compiler.OP_CONSTANT), 0, 0, byte(compiler.OP_CONSTANT), 0, 1, byte(compiler.OP_ADD), byte(compiler.OP_PRINT), byte(compiler.OP_END)},
+				ConstantsPool: []any{int64(10), int64(3)},
+			},
+			expectedStack: []any{},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_NOT),
+					byte(compiler.OP_PRINT),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{bool(false)},
+			},
+			expectedStack: []any{},
 		},
 	}
 
