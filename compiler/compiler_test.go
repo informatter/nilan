@@ -25,17 +25,22 @@ func assertBytecodeEquals(t *testing.T, got Bytecode, want Bytecode) {
 	}
 }
 
+
+
 func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 	tests := []struct {
-		tokens           []token.Token
+		statements       []ast.Stmt
 		expectedBytecode Bytecode
 	}{
 		{
-			tokens: []token.Token{
-				token.CreateLiteralToken(token.INT, int64(5), "5", 0, 0),
-				token.CreateToken(token.ADD, 0, 0),
-				token.CreateLiteralToken(token.INT, int64(1), "1", 0, 0),
-				token.CreateToken(token.EOF, 0, 0),
+			statements: []ast.Stmt{
+				ast.ExpressionStmt{
+					Expression: ast.Binary{
+						Left:     ast.Literal{Value: int64(5)},
+						Operator: token.CreateToken(token.ADD, 0, 0),
+						Right:    ast.Literal{Value: int64(1)},
+					},
+				},
 			},
 			expectedBytecode: Bytecode{
 				Instructions:  []byte{byte(OP_CONSTANT), 0, 0, byte(OP_CONSTANT), 0, 1, byte(OP_ADD), byte(OP_END)},
@@ -43,11 +48,14 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 			},
 		},
 		{
-			tokens: []token.Token{
-				token.CreateLiteralToken(token.INT, int64(5), "5", 0, 0),
-				token.CreateToken(token.MULT, 0, 0),
-				token.CreateLiteralToken(token.INT, int64(1), "1", 0, 0),
-				token.CreateToken(token.EOF, 0, 0),
+			statements: []ast.Stmt{
+				ast.ExpressionStmt{
+					Expression: ast.Binary{
+						Left:     ast.Literal{Value: int64(5)},
+						Operator: token.CreateToken(token.MULT, 0, 0),
+						Right:    ast.Literal{Value: int64(1)},
+					},
+				},
 			},
 			expectedBytecode: Bytecode{
 				Instructions:  []byte{byte(OP_CONSTANT), 0, 0, byte(OP_CONSTANT), 0, 1, byte(OP_MULTIPLY), byte(OP_END)},
@@ -55,11 +63,14 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 			},
 		},
 		{
-			tokens: []token.Token{
-				token.CreateLiteralToken(token.INT, int64(5), "5", 0, 0),
-				token.CreateToken(token.DIV, 0, 0),
-				token.CreateLiteralToken(token.INT, int64(1), "1", 0, 0),
-				token.CreateToken(token.EOF, 0, 0),
+			statements: []ast.Stmt{
+				ast.ExpressionStmt{
+					Expression: ast.Binary{
+						Left:     ast.Literal{Value: int64(5)},
+						Operator: token.CreateToken(token.DIV, 0, 0),
+						Right:    ast.Literal{Value: int64(1)},
+					},
+				},
 			},
 			expectedBytecode: Bytecode{
 				Instructions:  []byte{byte(OP_CONSTANT), 0, 0, byte(OP_CONSTANT), 0, 1, byte(OP_DIVIDE), byte(OP_END)},
@@ -67,11 +78,14 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 			},
 		},
 		{
-			tokens: []token.Token{
-				token.CreateLiteralToken(token.INT, int64(5), "5", 0, 0),
-				token.CreateToken(token.SUB, 0, 0),
-				token.CreateLiteralToken(token.INT, int64(1), "1", 0, 0),
-				token.CreateToken(token.EOF, 0, 0),
+			statements: []ast.Stmt{
+				ast.ExpressionStmt{
+					Expression: ast.Binary{
+						Left:     ast.Literal{Value: int64(5)},
+						Operator: token.CreateToken(token.SUB, 0, 0),
+						Right:    ast.Literal{Value: int64(1)},
+					},
+				},
 			},
 			expectedBytecode: Bytecode{
 				Instructions:  []byte{byte(OP_CONSTANT), 0, 0, byte(OP_CONSTANT), 0, 1, byte(OP_SUBTRACT), byte(OP_END)},
@@ -81,8 +95,8 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		compiler := New(tt.tokens)
-		bytecode, err := compiler.Compile()
+		compiler := NewASTCompiler()
+		bytecode, err := compiler.CompileAST(tt.statements)
 		if err != nil {
 			t.Errorf("compilation error occurred: %s", err.Error())
 		}
@@ -92,14 +106,17 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 
 func TestCompileNumericTokens_UnaryExpressions(t *testing.T) {
 	tests := []struct {
-		tokens           []token.Token
+		statements       []ast.Stmt
 		expectedBytecode Bytecode
 	}{
 		{
-			tokens: []token.Token{
-				token.CreateToken(token.SUB, 0, 0),
-				token.CreateLiteralToken(token.INT, int64(5), "5", 0, 0),
-				token.CreateToken(token.EOF, 0, 0),
+			statements: []ast.Stmt{
+				ast.ExpressionStmt{
+					Expression: ast.Unary{
+						Operator: token.CreateToken(token.SUB, 0, 0),
+						Right:    ast.Literal{Value: int64(5)},
+					},
+				},
 			},
 			expectedBytecode: Bytecode{
 				Instructions:  []byte{byte(OP_CONSTANT), 0, 0, byte(OP_NEGATE), byte(OP_END)},
@@ -109,8 +126,8 @@ func TestCompileNumericTokens_UnaryExpressions(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		compiler := New(tt.tokens)
-		bytecode, err := compiler.Compile()
+		compiler := NewASTCompiler()
+		bytecode, err := compiler.CompileAST(tt.statements)
 		if err != nil {
 			t.Errorf("compilation error occurred: %s", err.Error())
 		}
@@ -121,19 +138,26 @@ func TestCompileNumericTokens_UnaryExpressions(t *testing.T) {
 func TestDiassembleBytecode(t *testing.T) {
 
 	tests := []struct {
-		tokens   []token.Token
-		expected string
+		statements []ast.Stmt
+		expected   string
 	}{
 		{
-			tokens: []token.Token{
-				token.CreateLiteralToken(token.INT, int64(1), "1", 0, 0),
-				token.CreateToken(token.ADD, 0, 0),
-				token.CreateLiteralToken(token.INT, int64(2), "2", 0, 0),
-				token.CreateToken(token.MULT, 0, 0),
-				token.CreateLiteralToken(token.INT, int64(4), "4", 0, 0),
-				token.CreateToken(token.ADD, 0, 0),
-				token.CreateLiteralToken(token.INT, int64(3), "3", 0, 0),
-				token.CreateToken(token.EOF, 0, 0),
+			statements: []ast.Stmt{
+				ast.ExpressionStmt{
+					Expression: ast.Binary{
+						Left: ast.Binary{
+							Left:     ast.Literal{Value: int64(1)},
+							Operator: token.CreateToken(token.ADD, 0, 0),
+							Right: ast.Binary{
+								Left:     ast.Literal{Value: int64(2)},
+								Operator: token.CreateToken(token.MULT, 0, 0),
+								Right:    ast.Literal{Value: int64(4)},
+							},
+						},
+						Operator: token.CreateToken(token.ADD, 0, 0),
+						Right:    ast.Literal{Value: int64(3)},
+					},
+				},
 			},
 			expected: `opcode: OP_CONSTANT, operand: 0, operand widths: 2 bytes, value: 1
 opcode: OP_CONSTANT, operand: 1, operand widths: 2 bytes, value: 2
@@ -148,8 +172,8 @@ opcode: OP_END, operand: None, operand widths: 0 bytes`,
 
 	for _, tt := range tests {
 
-		compiler := New(tt.tokens)
-		_, err := compiler.Compile()
+		compiler := NewASTCompiler()
+		_, err := compiler.CompileAST(tt.statements)
 		if err != nil {
 			t.Errorf("compilation error occurred: %s", err.Error())
 		}
