@@ -25,7 +25,72 @@ func assertBytecodeEquals(t *testing.T, got Bytecode, want Bytecode) {
 	}
 }
 
-
+func TestCompilerPrintStatement(t *testing.T) {
+	tests := []struct {
+		name             string
+		statements       []ast.Stmt
+		expectedBytecode Bytecode
+	}{
+		{
+			name: "Print literal integer",
+			statements: []ast.Stmt{
+				ast.PrintStmt{
+					Expression: ast.Grouping{
+						Expression: ast.Literal{
+							Value: int64(5),
+						},
+					},
+				},
+			},
+			expectedBytecode: Bytecode{
+				Instructions:  []byte{byte(OP_CONSTANT), 0, 0, byte(OP_PRINT), byte(OP_END)},
+				ConstantsPool: []any{int64(5)},
+			},
+		},
+		{
+			name: "Print literal float",
+			statements: []ast.Stmt{
+				ast.PrintStmt{
+					Expression: ast.Grouping{
+						Expression: ast.Literal{
+							Value: float64(5.545),
+						},
+					},
+				},
+			},
+			expectedBytecode: Bytecode{
+				Instructions:  []byte{byte(OP_CONSTANT), 0, 0, byte(OP_PRINT), byte(OP_END)},
+				ConstantsPool: []any{float64(5.545)},
+			},
+		},
+		{
+			name: "Print expression result",
+			statements: []ast.Stmt{
+				ast.PrintStmt{
+					Expression: ast.Grouping{
+						Expression: ast.Binary{
+							Left:     ast.Literal{Value: int64(2)},
+							Operator: token.CreateToken(token.ADD, 0, 0),
+							Right:    ast.Literal{Value: int64(10)},
+						},
+					},
+				},
+			},
+			expectedBytecode: Bytecode{
+				Instructions:  []byte{byte(OP_CONSTANT), 0, 0, byte(OP_CONSTANT), 0, 1, byte(OP_ADD), byte(OP_PRINT), byte(OP_END)},
+				ConstantsPool: []any{int64(2), int64(10)},
+			},
+		},
+	}
+	for _, tt := range tests {
+		compiler := NewASTCompiler()
+		bytecode, err := compiler.CompileAST(tt.statements)
+		if err != nil {
+			t.Errorf("compilation error occurred: %s", err.Error())
+		}
+		assertBytecodeEquals(t, bytecode, tt.expectedBytecode)
+	}
+}
 
 func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 	tests := []struct {
