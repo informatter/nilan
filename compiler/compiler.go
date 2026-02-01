@@ -442,10 +442,7 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 // Other statement types (assignments, variables, control flow) are skipped.
 func (ac *ASTCompiler) CompileAST(statements []ast.Stmt) (Bytecode, error) {
 	for _, stmt := range statements {
-
-		if exprStmt, ok := stmt.(ast.ExpressionStmt); ok {
-			exprStmt.Expression.Accept(ac)
-		}
+		stmt.Accept(ac)
 		// TODO: Handle other statement types (VarStmt, IfStmt, WhileStmt ... etc)
 	}
 	ac.emit(OP_END)
@@ -487,6 +484,7 @@ func (ac *ASTCompiler) VisitUnary(unary ast.Unary) any {
 }
 
 // VisitLiteral handles literal values (numbers, strings, booleans, null)
+// Adds the literal value to the constants pool.
 func (ac *ASTCompiler) VisitLiteral(literal ast.Literal) any {
 	ac.addConstant(literal.Value)
 	return nil
@@ -520,7 +518,9 @@ func (ac *ASTCompiler) VisitExpressionStmt(exprStmt ast.ExpressionStmt) any {
 }
 
 func (ac *ASTCompiler) VisitPrintStmt(printStmt ast.PrintStmt) any {
-	panic("Print statements not yet supported in bytecode compilation")
+	printStmt.Expression.Accept(ac)
+	ac.emit(OP_PRINT)
+	return nil
 }
 
 func (ac *ASTCompiler) VisitVarStmt(varStmt ast.VarStmt) any {
