@@ -8,14 +8,15 @@ import (
 // Represents the definition of the `Bytecode`
 // which will be created by the compiler and passed to
 // the Virtual Machine (VM) to execute
-//
-// Fields:
-//   - Instructions: An array of instructions defined by opcodes and
-//     their operands
-//   - ConstantsPool: An array containing all the constant values from the source code.
 type Bytecode struct {
-	Instructions  Instructions
+	//An array of instructions defined by opcodes and their operands
+	Instructions Instructions
+
+	// An array containing all the constant values from the source code.
 	ConstantsPool []any
+
+	// an array containing all the identifier names; varibale names, function names... etc
+	NameConstants []string
 }
 
 type Opcode byte
