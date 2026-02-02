@@ -43,6 +43,8 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 	fmt.Println("\n\nWelcome to the compiled version of Nilan!")
 
 	scanner := bufio.NewScanner(os.Stdin)
+	astCompiler := compiler.NewASTCompiler()
+	vm := vm.New()
 
 	for {
 		fmt.Fprintf(os.Stdout, ">>> ")
@@ -77,7 +79,8 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 			continue
 		}
 
-		astCompiler := compiler.NewASTCompiler()
+		// TODO/NOTE: Previous compiled code is going to be recompiled again in the REPL,
+		// but for now its fine
 		bytecode, err := astCompiler.CompileAST(statements)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err.Error())
@@ -102,7 +105,6 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 			parser.Print(statements)
 		}
 
-		vm := vm.New()
 		runtimeErr := vm.Run(bytecode)
 		if runtimeErr != nil {
 			fmt.Fprintln(os.Stderr, runtimeErr.Error())
