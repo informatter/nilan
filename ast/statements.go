@@ -29,7 +29,13 @@ func (p PrintStmt) Accept(v StmtVisitor) any {
 // of the name of the variable and the expression it binds to. A declaration
 // statement declares functions, variables and classes.
 type VarStmt struct {
-	Name        token.Token
+
+	// Name is the token representing the variable's identifier.
+	Name token.Token
+
+	// Initialiser is the expression assigned to the variable when declared.
+	// For example, `var x=5` the initialser is `5`. Since this is an expression,
+	// this is also supported `var x = 5+3`.
 	Initializer Expression
 }
 
