@@ -182,7 +182,7 @@ func DiassembleInstruction(instruction []byte) (string, error) {
 
 	var diassembled string
 	switch opcode {
-	case OP_CONSTANT:
+	case OP_CONSTANT, OP_DEFINE_GLOBAL, OP_SET_GLOBAL, OP_GET_GLOBAL:
 		operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
 		diassembled = fmt.Sprintf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, def.OperandWidths[0])
 
