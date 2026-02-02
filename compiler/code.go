@@ -48,6 +48,11 @@ const (
 	OP_NEGATE   Opcode = iota
 	OP_NOT      Opcode = iota
 	OP_PRINT    Opcode = iota
+
+	// Opcodes for gobal variables
+	OP_DEFINE_GLOBAL Opcode = iota
+	OP_SET_GLOBAL    Opcode = iota
+	OP_GET_GLOBAL    Opcode = iota
 )
 
 // Represents a definition of an opcode.
@@ -62,6 +67,9 @@ type OpCodeDefinition struct {
 var definitions = map[Opcode]*OpCodeDefinition{
 	// has a single operand which takes two bytes of memory.
 	OP_CONSTANT: {Name: "OP_CONSTANT", OperandWidths: []int{2}},
+
+	// These opcodes do not have any operands. By default their instruction set
+	// is defined by an array of a single byte
 	OP_END:      {Name: "OP_END"},
 	OP_SUBTRACT: {Name: "OP_SUBTRACT"},
 	OP_ADD:      {Name: "OP_ADD"},
@@ -70,6 +78,12 @@ var definitions = map[Opcode]*OpCodeDefinition{
 	OP_NEGATE:   {Name: "OP_NEGATE"},
 	OP_NOT:      {Name: "OP_NOT"},
 	OP_PRINT:    {Name: "OP_PRINT"},
+
+	// All opcodes for global variables have a single operand which takes two bytes of memory.
+	// The operand will be the name index
+	OP_DEFINE_GLOBAL: {Name: "OP_DEFINE_GLOBAL", OperandWidths: []int{2}},
+	OP_GET_GLOBAL:    {Name: "OP_GET_GLOBAL", OperandWidths: []int{2}},
+	OP_SET_GLOBAL:    {Name: "OP_SET_GLOBAL", OperandWidths: []int{2}},
 }
 
 func Get(op Opcode) (*OpCodeDefinition, error) {
@@ -105,35 +119,41 @@ func Get(op Opcode) (*OpCodeDefinition, error) {
 //	// Suppose OP_CONSTANT expects a 2-byte operand (index into constants table).
 //	instr := MakeBytecode(OP_CONSTANT, 42)
 //	// instr now contains: [<opcode for OP_CONSTANT>, 0x00, 0x2A]
-func AssembleInstruction(op Opcode, operands ...int) []byte {
+func AssembleInstruction(op Opcode, operands ...int) ([]byte, error) {
 	def, err := Get(op)
 	if err != nil {
-		return []byte{}
+		return []byte{}, nil
 	}
 
-	byteOffset := OPCODE_TOTAL_BYTES
-	instructionLength := byteOffset
-	for _, i := range def.OperandWidths {
-		instructionLength += i
+	// compute instruction length: opcode byte + operand widths
+	instructionLength := OPCODE_TOTAL_BYTES
+	for _, w := range def.OperandWidths {
+		instructionLength += w
 	}
 
 	instruction := make([]byte, instructionLength)
-
 	// The firt byte of the instruction will be the opcode
 	instruction[0] = byte(op)
 
+	offset := OPCODE_TOTAL_BYTES
 	for i, operand := range operands {
 		width := def.OperandWidths[i]
-		switch op {
-		case OP_CONSTANT:
-			binary.BigEndian.PutUint16(instruction[byteOffset:], uint16(operand))
-		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END, OP_PRINT:
-			return instruction
-
+		switch width {
+		case 2:
+			// Handles all opcodes with operand width of 2 bytes
+			binary.BigEndian.PutUint16(instruction[offset:], uint16(operand))
+		case 1:
+			// Handles all opcodes with operand width of 1 byte
+			instruction[offset] = byte(operand)
+		default:
+			return nil, DeveloperError{
+				Message: "unrecognized operand width.",
+			}
 		}
-		byteOffset += width
+		offset += width
 	}
-	return instruction
+
+	return instruction, nil
 }
 
 // Takes a single bytecode instruction and prints out its
