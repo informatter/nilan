@@ -222,10 +222,6 @@ func (parser *Parser) variableDeclaration() (ast.Stmt, error) {
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		errMsg := fmt.Sprintf("The variable '%s' can't be unassigned", tok.Lexeme)
-		err := CreateSyntaxError(tok.Line, tok.Column, errMsg)
-		return nil, err
 	}
 
 	return ast.VarStmt{
