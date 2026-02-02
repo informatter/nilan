@@ -333,7 +333,7 @@ func (c *Compiler) addConstant(value any) {
 // then appends the resulting instruction bytes to the compiler's instruction
 // stream. This is the low-level mechanism for building the VM instructions.
 func (c *Compiler) emit(opcode Opcode, operands ...int) {
-	instruction := AssembleInstruction(opcode, operands...)
+	instruction, _ := AssembleInstruction(opcode, operands...)
 	c.bytecode.Instructions = append(c.bytecode.Instructions, instruction...)
 }
 
@@ -341,7 +341,12 @@ func (c *Compiler) emit(opcode Opcode, operands ...int) {
 // It implements both ast.ExpressionVisitor and ast.StmtVisitor interfaces
 // to traverse and compile the abstract syntax tree to bytecode.
 type ASTCompiler struct {
+
+	// The resulting compiled bytecode.
 	bytecode Bytecode
+
+	// Tracks initialized global variables
+	initialized map[string]bool
 }
 
 // NewASTCompiler creates a new AST-to-bytecode compiler.
@@ -350,7 +355,9 @@ func NewASTCompiler() *ASTCompiler {
 		bytecode: Bytecode{
 			Instructions:  Instructions{},
 			ConstantsPool: []any{},
+			NameConstants: []string{},
 		},
+		initialized: make(map[string]bool),
 	}
 }
 
@@ -388,7 +395,7 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 	for ip <= totalInstructions {
 		opCode := Opcode(ac.bytecode.Instructions[ip])
 		switch opCode {
-		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_END:
+		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END:
 
 			result, err := DiassembleInstruction([]byte{ac.bytecode.Instructions[ip]})
 			if err != nil {
@@ -401,7 +408,7 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 			builder.WriteString("\n")
 			instructionLength = OPCODE_TOTAL_BYTES
 
-		case OP_CONSTANT:
+		case OP_CONSTANT, OP_DEFINE_GLOBAL, OP_SET_GLOBAL, OP_GET_GLOBAL:
 			offset := ip + OP_CONSTANT_TOTAL_BYTES
 			instruction := ac.bytecode.Instructions[ip:offset]
 			index := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
@@ -437,14 +444,35 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 	return diassembledBytecode, nil
 }
 
-// CompileAST compiles a slice of AST statements to bytecode.
-// Currently, it only processes ExpressionStmt nodes containing arithmetic expressions.
-// Other statement types (assignments, variables, control flow) are skipped.
-func (ac *ASTCompiler) CompileAST(statements []ast.Stmt) (Bytecode, error) {
-	for _, stmt := range statements {
-		stmt.Accept(ac)
-		// TODO: Handle other statement types (VarStmt, IfStmt, WhileStmt ... etc)
+func (ac *ASTCompiler) CompileAST(statements []ast.Stmt) (b Bytecode, err error) {
+	// Recover from any panic that may occur during compilation
+	defer func() {
+		if r := recover(); r != nil {
+			err = SyntaxError{
+				Message: fmt.Sprint(r),
+			}
+		}
+	}()
+
+	// If previous compilation left an OP_END at the end, drop it
+	if len(ac.bytecode.Instructions) > 0 {
+		if ac.bytecode.Instructions[len(ac.bytecode.Instructions)-1] == byte(OP_END) {
+			ac.bytecode.Instructions = ac.bytecode.Instructions[:len(ac.bytecode.Instructions)-1]
+		}
 	}
+
+	for _, stmt := range statements {
+		func() {
+			//NOTE: Catch panics per statement to avoid aborting the whole loop
+			defer func() {
+				if r := recover(); r != nil {
+					panic(r)
+				}
+			}()
+			stmt.Accept(ac)
+		}()
+	}
+
 	ac.emit(OP_END)
 	return ac.bytecode, nil
 }
@@ -497,13 +525,51 @@ func (ac *ASTCompiler) VisitGrouping(grouping ast.Grouping) any {
 	return nil
 }
 
+// VisitVariableExpression handles variable expressions and emits
+// bytecode to so the VM can retrieve the variable's value.
 func (ac *ASTCompiler) VisitVariableExpression(variable ast.Variable) any {
-	panic("Variables not yet supported in bytecode compilation")
+
+	identifier := variable.Name.Lexeme
+	index := -1
+	for i, name := range ac.bytecode.NameConstants {
+		if identifier == name {
+			index = i
+			break
+		}
+	}
+
+	if index == -1 {
+		panic(fmt.Sprintf("name '%s' is not defined", identifier))
+	}
+	if !ac.initialized[identifier] {
+		panic(fmt.Sprintf("Cant access uninitialised variable: %s", identifier))
+	}
+
+	ac.emit(OP_GET_GLOBAL, index)
+	return nil
 }
 
+// VisitAssignExpression handles an assignmnet expression and updates
+// the variables value.
 func (ac *ASTCompiler) VisitAssignExpression(assign ast.Assign) any {
 
-	panic("Assignment not yet supported in bytecode compilation")
+	index := -1
+	for i, name := range ac.bytecode.NameConstants {
+		if assign.Name.Lexeme == name {
+			index = i
+			break
+		}
+	}
+	if index == -1 {
+		panic(fmt.Sprintf("Cant access uninitialised variable: %s", assign.Name.Lexeme))
+	}
+
+	// Compile the expression to be assigned.
+	assign.Value.Accept(ac)
+	ac.emit(OP_SET_GLOBAL, index)
+	ac.initialized[assign.Name.Lexeme] = true
+	return nil
+
 }
 
 func (ac *ASTCompiler) VisitLogicalExpression(logical ast.Logical) any {
@@ -523,8 +589,22 @@ func (ac *ASTCompiler) VisitPrintStmt(printStmt ast.PrintStmt) any {
 	return nil
 }
 
+// VisitVarStmt handles variable declaration statements.
 func (ac *ASTCompiler) VisitVarStmt(varStmt ast.VarStmt) any {
-	panic("Variable declarations not yet supported in bytecode compilation")
+
+	variableName := varStmt.Name.Lexeme
+	if varStmt.Initializer != nil {
+		varStmt.Initializer.Accept(ac)
+		index := ac.addNameConstant(variableName)
+		ac.emit(OP_SET_GLOBAL, index)
+		ac.initialized[variableName] = true
+	} else {
+		// handles uninitialised variables, e.g `var a`
+		ac.addNameConstant(variableName)
+		ac.initialized[variableName] = false
+	}
+
+	return nil
 }
 
 func (ac *ASTCompiler) VisitBlockStmt(blockStmt ast.BlockStmt) any {
@@ -539,15 +619,35 @@ func (ac *ASTCompiler) VisitWhileStmt(whileStmt ast.WhileStmt) any {
 	panic("While statements not yet supported in bytecode compilation")
 }
 
-// addConstant appends a value to the constant pool and emits an OP_CONSTANT instruction
+// addConstant appends a value to the constant pool and emits an OP_CONSTANT instruction.
+// The operand of the instruction will be its index in the constants pool.
 func (ac *ASTCompiler) addConstant(value any) {
 	ac.bytecode.ConstantsPool = append(ac.bytecode.ConstantsPool, value)
 	index := len(ac.bytecode.ConstantsPool) - 1
 	ac.emit(OP_CONSTANT, index)
 }
 
+// addNameConstant adds a variable name to the NameConstants pool
+// and returns its index.
+func (ac *ASTCompiler) addNameConstant(value string) int {
+
+	for _, name := range ac.bytecode.NameConstants {
+		if name == value {
+			panic(fmt.Sprintf("redefinition of variable '%s'", value))
+		}
+	}
+	ac.bytecode.NameConstants = append(ac.bytecode.NameConstants, value)
+	return len(ac.bytecode.NameConstants) - 1
+}
+
 // emit constructs a bytecode instruction and appends it to the instruction stream
 func (ac *ASTCompiler) emit(opcode Opcode, operands ...int) {
-	instruction := AssembleInstruction(opcode, operands...)
+	instruction, err := AssembleInstruction(opcode, operands...)
+	if err != nil {
+		// TODO: Improve error handling in compiler.
+		// Although in this case its can be OK as the error returned is of type `DeveloperError`
+		// which would only be raised during development.
+		panic(err.Error())
+	}
 	ac.bytecode.Instructions = append(ac.bytecode.Instructions, instruction...)
 }
