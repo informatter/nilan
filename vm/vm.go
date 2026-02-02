@@ -117,14 +117,18 @@ func literalToFloat64(value any) (float64, error) {
 // It is the runtime environment where Nilan bytecode
 // gets executed.
 type VirtualMachine struct {
-	stack Stack
-	ip    int
-	debug bool
+	stack      Stack
+	ip         int
+	debug      bool
+	globalVars map[string]any
 }
 
 // Creates a new VM instance
 func New() *VirtualMachine {
-	return &VirtualMachine{debug: true}
+	return &VirtualMachine{
+		debug:      true,
+		globalVars: make(map[string]any),
+	}
 }
 
 // Executes the provided bytecode on the virtual machine (VM).
@@ -154,7 +158,7 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 		switch opCode {
 		case compiler.OP_END:
 			if vm.stack.Peek() != nil {
-				// NOTE temp code to handle operations such as 2+2 to be printed in the REPL
+				// NOTE: temp code to handle operations such as 2+2 to be printed in the REPL
 				// Can there be a more suitable place to handle this other than in the VM?
 				// for now it does not hurt to leave it here...
 				fmt.Println(vm.stack.Peek())
@@ -197,6 +201,11 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 				return err
 			}
 			instructionLength = l
+
+		case compiler.OP_DEFINE_GLOBAL, compiler.OP_SET_GLOBAL:
+			instructionLength = vm.execDefineGlobalInstruction(bytecode)
+		case compiler.OP_GET_GLOBAL:
+			instructionLength = vm.execGetGlobalInstruction(bytecode)
 		default:
 			// NOTE: This should only happen in development mode.
 			return fmt.Errorf("unknown opcode %v at ip %d", opCode, vm.ip)
@@ -217,6 +226,28 @@ func (vm *VirtualMachine) execPrintInstruction() int {
 	return compiler.OPCODE_TOTAL_BYTES
 }
 
+// execDefineGlobalInstruction defines a global variable, and assigns the corresponding
+// value from the top of the stack to it.
+func (vm *VirtualMachine) execDefineGlobalInstruction(bytecode compiler.Bytecode) int {
+	index := vm.ip + compiler.OPCODE_TOTAL_BYTES
+	instruction := bytecode.Instructions[index : vm.ip+compiler.OP_CONSTANT_TOTAL_BYTES]
+	operand := binary.BigEndian.Uint16(instruction)
+	name := bytecode.NameConstants[operand]
+
+	vm.globalVars[name] = vm.stack.Pop()
+	return compiler.OP_CONSTANT_TOTAL_BYTES
+}
+
+// execSetGlobalInstruction sets the value of an existing global variable
+func (vm *VirtualMachine) execGetGlobalInstruction(bytecode compiler.Bytecode) int {
+	index := vm.ip + compiler.OPCODE_TOTAL_BYTES
+	instruction := bytecode.Instructions[index : vm.ip+compiler.OP_CONSTANT_TOTAL_BYTES]
+	operand := binary.BigEndian.Uint16(instruction)
+	name := bytecode.NameConstants[operand]
+	vm.stack.Push(vm.globalVars[name])
+	return compiler.OP_CONSTANT_TOTAL_BYTES
+}
+
 // Executes a unary operations and pushes the result onto the VM's stack.
 func (vm *VirtualMachine) execUnaryInstruction(opCode compiler.Opcode) (int, error) {
 	value := vm.stack.Pop()
@@ -231,6 +262,7 @@ func (vm *VirtualMachine) execUnaryInstruction(opCode compiler.Opcode) (int, err
 				return 0, RuntimeError{Message: err.Error()}
 			}
 			vm.stack.Push(-val)
+			return compiler.OPCODE_TOTAL_BYTES, nil
 		}
 
 		val, err := literalToInt64(value)
