@@ -20,9 +20,15 @@ Source Code → Lexer → Tokens → Parser → AST → ASTCompiler → Bytecode
 
 ✅ Arithmetic expressions: `+`, `-`, `*`, `/`
 
-✅ Unary negation: `-x` (bytecode generation)
+✅ Comparison operators: `>`, `>=`, `<`, `<=`, `==`, `!=`
 
-✅ Literal values: integers and floats
+✅ Boolean literals: `true`, `false`
+
+✅ Unary negation: `-10`, `!false`
+
+✅ Assignment statements (e.g., `var a = 2`)
+
+✅ Literal values: integers, floats, boleans, strings
 
 ✅ Grouped expressions: `(a + b) * c`
 
@@ -64,27 +70,23 @@ The following features were implemented in the tree-walk interpreter but are **n
 
 The following features are **not yet supported** in the compiled version:
 
-🔴 Variables and variable declarations
-
-🔴 Assignments
-
 🔴 Lexical and block scope
 
-🔴 Comparison operators: `>`, `>=`, `<`, `<=`, `==`, `!=`
-
-🔴 Boolean literals and operations: `true`, `false`, `and`, `or`, `!`
+🔴 Boolean literals and operations: `and`, `or`
 
 🔴 String literals and string operations
 
 🔴 Control flow: `if`, `else`, `while` loops
 
-🔴 Print statements
-
-🔴 Unary logical not `!`
-
 🔴 Functions and function calls
 
 🔴 Classes, structs, interfaces
+
+🔴 Exponentiation or other advanced operators
+
+🔴 Complex features such as Module/package imports, data structures, etc ...
+
+🔴 Static typing
 
 ### Tree-Walk Interpreter (Deprecated) 🔴
 
