@@ -24,9 +24,11 @@ Source Code → Lexer → Tokens → Parser → AST → ASTCompiler → Bytecode
 
 ✅ Boolean literals: `true`, `false`
 
+✅ Boolean logical expressions: `and`, `or`
+
 ✅ Unary negation: `-10`, `!false`
 
-✅ Assignment statements (e.g., `var a = 2`)
+✅ Assignment statements: `var a = 2` (global variables for now) 
 
 ✅ Literal values: integers, floats, boleans, strings
 
@@ -72,9 +74,7 @@ The following features are **not yet supported** in the compiled version:
 
 🔴 Lexical and block scope
 
-🔴 Boolean literals and operations: `and`, `or`
-
-🔴 String literals and string operations
+🔴 string operations
 
 🔴 Control flow: `if`, `else`, `while` loops
 
