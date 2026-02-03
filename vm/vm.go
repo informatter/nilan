@@ -37,6 +37,41 @@ func divInt(a int64, b int64) int64 {
 	return a / b
 }
 
+type equalityFuncFloat func(a float64, b float64) bool
+type equalityFuncInt func(a int64, b int64) bool
+
+func largerThanInt(a int64, b int64) bool {
+	return a > b
+}
+
+func largerThanFloat(a float64, b float64) bool {
+	return a > b
+}
+
+func smallerThanInt(a int64, b int64) bool {
+	return a < b
+}
+
+func smallerThanFloat(a float64, b float64) bool {
+	return a < b
+}
+
+func largerEqualInt(a int64, b int64) bool {
+	return a >= b
+}
+
+func largerEqualFloat(a float64, b float64) bool {
+	return a >= b
+}
+
+func smallerEqualInt(a int64, b int64) bool {
+	return a <= b
+}
+
+func smallerEqualFloat(a float64, b float64) bool {
+	return a <= b
+}
+
 // Determines if a value is a float.
 //
 // Parameters:
@@ -67,6 +102,11 @@ func isInt(value any) bool {
 	default:
 		return false
 	}
+}
+
+// isNumeric determines if a value is either an integer or a float.
+func isNumeric(value any) bool {
+	return isFloat(value) || isInt(value)
 }
 
 // Attempts to convert a literal value into a int64.
@@ -102,7 +142,6 @@ func literalToInt64(value any) (int64, error) {
 //   - float64: the converted numeric value.
 //   - error: on failure to convert value to float64.
 func literalToFloat64(value any) (float64, error) {
-
 	switch v := value.(type) {
 	case float64:
 		return v, nil
@@ -113,14 +152,27 @@ func literalToFloat64(value any) (float64, error) {
 	}
 }
 
+// comparisonOpHandler defines a function type for handling comparison operations.
+type comparisonOpHandler func(*VirtualMachine, equalityFuncFloat, equalityFuncInt) error
+
+// makeComparisonHandler creates a comparison operation handler
+// using the provided float and int equality functions.
+func makeComparisonHandler(f equalityFuncFloat, i equalityFuncInt) comparisonOpHandler {
+	return func(vm *VirtualMachine, _ equalityFuncFloat, _ equalityFuncInt) error {
+		return vm.handleNumericEqualityOps(f, i)
+	}
+
+}
+
 // Represents a stack based virtual-machine (VirtualMachine).
 // It is the runtime environment where Nilan bytecode
 // gets executed.
 type VirtualMachine struct {
-	stack      Stack
-	ip         int
-	debug      bool
-	globalVars map[string]any
+	stack                Stack
+	ip                   int
+	debug                bool
+	globalVars           map[string]any
+	comparisonOpHandlers map[compiler.Opcode]comparisonOpHandler
 }
 
 // Creates a new VM instance
@@ -128,7 +180,71 @@ func New() *VirtualMachine {
 	return &VirtualMachine{
 		debug:      true,
 		globalVars: make(map[string]any),
+		comparisonOpHandlers: map[compiler.Opcode]comparisonOpHandler{
+			compiler.OP_LARGER:       makeComparisonHandler(largerThanFloat, largerThanInt),
+			compiler.OP_LESS:         makeComparisonHandler(smallerThanFloat, smallerThanInt),
+			compiler.OP_LARGER_EQUAL: makeComparisonHandler(largerEqualFloat, largerEqualInt),
+			compiler.OP_LESS_EQUAL:   makeComparisonHandler(smallerEqualFloat, smallerEqualInt),
+		},
 	}
+}
+
+// handleNumericEqualityOps applies numeric comparison functions to the two topmost
+// values on the VM stack.
+func (vm *VirtualMachine) handleNumericEqualityOps(floatFunc equalityFuncFloat, intFunc equalityFuncInt) error {
+	b := vm.stack.Pop()
+	a := vm.stack.Pop()
+	if !isNumeric(a) || !isNumeric(b) {
+		return RuntimeError{Message: fmt.Sprintf("operands must be numeric values: %v,%v", a, b)}
+	}
+	isAFloat := isFloat(a)
+	isBFloat := isFloat(b)
+	if isAFloat && isBFloat {
+		a, error := literalToFloat64(a)
+		b, err := literalToFloat64(b)
+		if error != nil || err != nil {
+			// This currently handles a very rage edge condition, where either number is not
+			// a float32 or float64, despite isFloat returning true.
+			message := fmt.Sprintf("operands must be valid floating point values: %v,%v", a, b)
+			return RuntimeError{Message: message}
+		}
+		vm.stack.Push(floatFunc(a, b))
+	} else if isAFloat && !isBFloat {
+		a, error := literalToFloat64(a)
+
+		if error != nil {
+			// This currently handles a very rage edge condition, where either number is not
+			// a float32/float64 or int types, despite isFloat/isInt returning true.
+			message := fmt.Sprintf("operands must be valid integer and floating point values: %v,%v", a, b)
+			return RuntimeError{Message: message}
+		}
+		if bv, ok := b.(int64); ok {
+			vm.stack.Push(floatFunc(a, float64(bv)))
+		}
+	} else if !isAFloat && isBFloat {
+
+		b, error := literalToFloat64(b)
+		if error != nil {
+			// This currently handles a very rage edge condition, where either number is not
+			// a float32/float64 or int types, despite isFloat/isInt returning true.
+			message := fmt.Sprintf("operands must be valid integer and floating point values: %v,%v", a, b)
+			return RuntimeError{Message: message}
+		}
+		if av, ok := a.(int64); ok {
+			vm.stack.Push(floatFunc(float64(av), b))
+		}
+	} else {
+		a, error := literalToInt64(a)
+		b, err := literalToInt64(b)
+		if error != nil || err != nil {
+			// This currently handles a very rage edge condition, where either number is not
+			// an int type, despite isInt returning true.
+			message := fmt.Sprintf("operands must be valid integer values: %v,%v", a, b)
+			return RuntimeError{Message: message}
+		}
+		vm.stack.Push(intFunc(a, b))
+	}
+	return nil
 }
 
 // Executes the provided bytecode on the virtual machine (VM).
@@ -202,6 +318,19 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 			}
 			instructionLength = l
 
+		case compiler.OP_LARGER, compiler.OP_LESS, compiler.OP_LARGER_EQUAL, compiler.OP_LESS_EQUAL:
+			l, err := vm.execComparisonInstruction(opCode)
+			if err != nil {
+				return err
+			}
+			instructionLength = l
+		case compiler.OP_EQUALITY, compiler.OP_NOT_EQUAL:
+			l, err := vm.execEqualityInstruction(opCode)
+			if err != nil {
+				return err
+			}
+			instructionLength = l
+
 		case compiler.OP_DEFINE_GLOBAL, compiler.OP_SET_GLOBAL:
 			instructionLength = vm.execDefineGlobalInstruction(bytecode)
 		case compiler.OP_GET_GLOBAL:
@@ -224,6 +353,37 @@ func (vm *VirtualMachine) execPrintInstruction() int {
 
 	fmt.Println(value)
 	return compiler.OPCODE_TOTAL_BYTES
+}
+
+// execEqualityInstruction executes equality or inequality operations based on the provided opcode.
+func (vm *VirtualMachine) execEqualityInstruction(opCode compiler.Opcode) (int, error) {
+
+	if opCode == compiler.OP_EQUALITY {
+		b := vm.stack.Pop()
+		a := vm.stack.Pop()
+		vm.stack.Push(a == b)
+		return compiler.OPCODE_TOTAL_BYTES, nil
+	}
+	if opCode == compiler.OP_NOT_EQUAL {
+		b := vm.stack.Pop()
+		a := vm.stack.Pop()
+		vm.stack.Push(a != b)
+		return compiler.OPCODE_TOTAL_BYTES, nil
+	}
+	return 0, RuntimeError{Message: fmt.Sprintf("unknown equality opcode %v", opCode)}
+}
+
+// execComparisonInstruction executes a comparison or equality operation based on the provided opcode.
+func (vm *VirtualMachine) execComparisonInstruction(opCode compiler.Opcode) (int, error) {
+
+	handler, ok := vm.comparisonOpHandlers[opCode]
+	if !ok {
+		return 0, RuntimeError{Message: fmt.Sprintf("unknown comparison opcode %v", opCode)}
+	}
+	if err := handler(vm, nil, nil); err != nil {
+		return 0, err
+	}
+	return compiler.OPCODE_TOTAL_BYTES, nil
 }
 
 // execDefineGlobalInstruction defines a global variable, and assigns the corresponding
