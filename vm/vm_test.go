@@ -53,6 +53,133 @@ func assertResults(tests []struct {
 	}
 }
 
+// Tests logical expressions in the bytecode without using variables
+func TestExecuteBytecodeLogicalOpVMStack(t *testing.T) {
+	tests := []struct {
+		bytecode      compiler.Bytecode
+		expectedStack any
+	}{
+
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_AND),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{true, true},
+			},
+			expectedStack: []any{true},
+		},
+
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_AND),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{true, false},
+			},
+			expectedStack: []any{false},
+		},
+
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_OR),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{true, false},
+			},
+			expectedStack: []any{true},
+		},
+
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_OR),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{false, false},
+			},
+			expectedStack: []any{false},
+		},
+
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_AND),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{false, false},
+			},
+			expectedStack: []any{false},
+		},
+
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_OR),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{false, true},
+			},
+			expectedStack: []any{true},
+		},
+	}
+	assertResults(tests, t)
+}
+
+// Tests logical expressions with variables in the bytecode
+func TestExecuteBytecodeLogicalOpWithVariables(t *testing.T) {
+	tests := []struct {
+		bytecode      compiler.Bytecode
+		expectedStack any
+	}{
+		// Define global var a = true, b = false, then a && b, a || b
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					// Define a = true
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_DEFINE_GLOBAL), 0, 0,
+					// Define b = false
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_DEFINE_GLOBAL), 0, 1,
+					// Get a
+					byte(compiler.OP_GET_GLOBAL), 0, 0,
+					// Get b
+					byte(compiler.OP_GET_GLOBAL), 0, 1,
+					// AND
+					byte(compiler.OP_AND),
+					// Get a
+					byte(compiler.OP_GET_GLOBAL), 0, 0,
+					// Get b
+					byte(compiler.OP_GET_GLOBAL), 0, 1,
+					// OR
+					byte(compiler.OP_OR),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{true, false},
+				NameConstants: []string{"a", "b"},
+			},
+			expectedStack: []any{false, true}, // a && b, a || b
+		},
+	}
+	assertResults(tests, t)
+}
+
 func TestExecuteBytecodeVMStack(t *testing.T) {
 
 	tests := []struct {
