@@ -493,6 +493,19 @@ func (ac *ASTCompiler) VisitBinary(binary ast.Binary) any {
 		ac.emit(OP_MULTIPLY)
 	case token.DIV:
 		ac.emit(OP_DIVIDE)
+
+	case token.EQUAL_EQUAL:
+		ac.emit(OP_EQUALITY)
+	case token.LARGER:
+		ac.emit(OP_LARGER)
+	case token.LESS:
+		ac.emit(OP_LESS)
+	case token.LESS_EQUAL:
+		ac.emit(OP_LESS_EQUAL)
+	case token.LARGER_EQUAL:
+		ac.emit(OP_LARGER_EQUAL)
+	case token.NOT_EQUAL:
+		ac.emit(OP_NOT_EQUAL)
 	}
 	return nil
 }
