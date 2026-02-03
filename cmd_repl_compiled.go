@@ -40,8 +40,18 @@ func (cmd *replCompiledCmd) SetFlags(f *flag.FlagSet) {
 
 func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 
-	fmt.Println("\n\nWelcome to the compiled version of Nilan!")
+	fmt.Println("\nWelcome to the Nilan programming language!")
+	fmt.Println("")
 
+	fmt.Print(`
+	███╗   ██╗██╗██╗      █████╗ ███╗   ██╗    ██████╗ ███████╗██████╗ ██╗     
+	████╗  ██║██║██║     ██╔══██╗████╗  ██║    ██╔══██╗██╔════╝██╔══██╗██║     
+	██╔██╗ ██║██║██║     ███████║██╔██╗ ██║    ██████╔╝█████╗  ██████╔╝██║     
+	██║╚██╗██║██║██║     ██╔══██║██║╚██╗██║    ██╔══██╗██╔══╝  ██╔═══╝ ██║     
+	██║ ╚████║██║███████╗██║  ██║██║ ╚████║    ██║  ██║███████╗██║     ███████╗
+	╚═╝  ╚═══╝╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝    ╚═╝  ╚═╝╚══════╝╚═╝     ╚══════╝
+																			
+`)
 	scanner := bufio.NewScanner(os.Stdin)
 	astCompiler := compiler.NewASTCompiler()
 	vm := vm.New()
