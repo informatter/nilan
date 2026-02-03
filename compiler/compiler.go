@@ -510,6 +510,7 @@ func (ac *ASTCompiler) VisitBinary(binary ast.Binary) any {
 	case token.NOT_EQUAL:
 		ac.emit(OP_NOT_EQUAL)
 	}
+
 	return nil
 }
 
@@ -595,9 +596,18 @@ func (ac *ASTCompiler) VisitAssignExpression(assign ast.Assign) any {
 
 }
 
+// VisitLogicalExpression compilers logical expressions (and, or)
 func (ac *ASTCompiler) VisitLogicalExpression(logical ast.Logical) any {
 
-	panic("Logical operations not yet supported in bytecode compilation")
+	logical.Left.Accept(ac)
+	logical.Right.Accept(ac)
+	switch logical.Operator.TokenType {
+	case token.OR:
+		ac.emit(OP_OR)
+	case token.AND:
+		ac.emit(OP_AND)
+	}
+	return nil
 }
 
 // VisitExpressionStmt is not directly called; handled by CompileAST
