@@ -2,12 +2,12 @@ package compiler
 
 import "fmt"
 
-type SyntaxError struct {
+type SemanticError struct {
 	Message string
 }
 
-func (e SyntaxError) Error() string {
-	return fmt.Sprintf("💥 SyntaxError: %s", e.Message)
+func (e SemanticError) Error() string {
+	return fmt.Sprintf("💥 SemanticError: %s", e.Message)
 }
 
 type DeveloperError struct {

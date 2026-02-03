@@ -199,7 +199,7 @@ func (c *Compiler) expression() (err error) {
 		if r := recover(); r != nil {
 			switch v := r.(type) {
 			case string:
-				err = SyntaxError{
+				err = SemanticError{
 					Message: v,
 				}
 			}
@@ -448,8 +448,11 @@ func (ac *ASTCompiler) CompileAST(statements []ast.Stmt) (b Bytecode, err error)
 	// Recover from any panic that may occur during compilation
 	defer func() {
 		if r := recover(); r != nil {
-			err = SyntaxError{
-				Message: fmt.Sprint(r),
+			switch v := r.(type) {
+			case SemanticError:
+				err = v
+			case DeveloperError:
+				err = v
 			}
 		}
 	}()
@@ -552,10 +555,14 @@ func (ac *ASTCompiler) VisitVariableExpression(variable ast.Variable) any {
 	}
 
 	if index == -1 {
-		panic(fmt.Sprintf("name '%s' is not defined", identifier))
+		panic(SemanticError{
+			Message: fmt.Sprintf("name '%s' is not defined", identifier),
+		})
 	}
 	if !ac.initialized[identifier] {
-		panic(fmt.Sprintf("Cant access uninitialised variable: %s", identifier))
+		panic(SemanticError{
+			Message: fmt.Sprintf("Cant access uninitialised variable '%s'", identifier),
+		})
 	}
 
 	ac.emit(OP_GET_GLOBAL, index)
@@ -574,7 +581,10 @@ func (ac *ASTCompiler) VisitAssignExpression(assign ast.Assign) any {
 		}
 	}
 	if index == -1 {
-		panic(fmt.Sprintf("Cant access uninitialised variable: %s", assign.Name.Lexeme))
+		// panic(fmt.Sprintf("Cant access uninitialised variable: %s", assign.Name.Lexeme))
+		panic(SemanticError{
+			Message: fmt.Sprintf("name '%s' is not defined", assign.Name.Lexeme),
+		})
 	}
 
 	// Compile the expression to be assigned.
@@ -646,7 +656,9 @@ func (ac *ASTCompiler) addNameConstant(value string) int {
 
 	for _, name := range ac.bytecode.NameConstants {
 		if name == value {
-			panic(fmt.Sprintf("redefinition of variable '%s'", value))
+			panic(SemanticError{
+				Message: fmt.Sprintf("Redefinition of variable '%s'", value),
+			})
 		}
 	}
 	ac.bytecode.NameConstants = append(ac.bytecode.NameConstants, value)
