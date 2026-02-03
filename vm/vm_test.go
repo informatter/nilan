@@ -309,3 +309,357 @@ func TestExecuteBytecodePrintStatement(t *testing.T) {
 
 	assertResults(tests, t)
 }
+
+func TestExecuteBytecodeComparisonOpVMStack(t *testing.T) {
+
+	tests := []struct {
+		bytecode      compiler.Bytecode
+		expectedStack any
+	}{
+		// Equality tests
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_EQUALITY),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(5)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_EQUALITY),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3)},
+			},
+			expectedStack: []any{false},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_EQUALITY),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(5.0), float64(5.0)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_EQUALITY),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(5.0), float64(3.0)},
+			},
+			expectedStack: []any{false},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_EQUALITY),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{bool(true), bool(true)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_EQUALITY),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{bool(true), bool(false)},
+			},
+			expectedStack: []any{false},
+		},
+		// Not Equal tests
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_NOT_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(5)},
+			},
+			expectedStack: []any{false},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_NOT_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_NOT_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(5.0), float64(5.0)},
+			},
+			expectedStack: []any{false},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_NOT_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(5.0), float64(3.0)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_NOT_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{bool(true), bool(true)},
+			},
+			expectedStack: []any{false},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_NOT_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{bool(true), bool(false)},
+			},
+			expectedStack: []any{true},
+		},
+		// Larger tests
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LARGER),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LARGER),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(3), int64(5)},
+			},
+			expectedStack: []any{false},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LARGER),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(5.0), float64(3.0)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LARGER),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), float64(3.0)},
+			},
+			expectedStack: []any{true},
+		},
+
+		// Less tests
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LESS),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(3), int64(5)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LESS),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3)},
+			},
+			expectedStack: []any{false},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LESS),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(3.0), float64(5.0)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LESS),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(5.0), int64(3)},
+			},
+			expectedStack: []any{false},
+		},
+		// Larger Equal tests
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LARGER_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(5)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LARGER_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LARGER_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(3), int64(5)},
+			},
+			expectedStack: []any{false},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LARGER_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(5.0), float64(5.0)},
+			},
+			expectedStack: []any{true},
+		},
+		// Less Equal tests
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LESS_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(5)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LESS_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(3), int64(5)},
+			},
+			expectedStack: []any{true},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LESS_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3)},
+			},
+			expectedStack: []any{false},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_LESS_EQUAL),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{float64(3.0), float64(5.0)},
+			},
+			expectedStack: []any{true},
+		},
+	}
+
+	assertResults(tests, t)
+}
