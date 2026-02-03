@@ -50,6 +50,15 @@ const (
 	OP_NOT      Opcode = iota
 	OP_PRINT    Opcode = iota
 
+	// Equality opcodes
+	OP_EQUALITY  Opcode = iota
+	OP_NOT_EQUAL Opcode = iota
+	// Comparison opcodes
+	OP_LARGER       Opcode = iota
+	OP_LESS         Opcode = iota
+	OP_LARGER_EQUAL Opcode = iota
+	OP_LESS_EQUAL   Opcode = iota
+
 	// Opcodes for gobal variables
 	OP_DEFINE_GLOBAL Opcode = iota
 	OP_SET_GLOBAL    Opcode = iota
@@ -79,6 +88,13 @@ var definitions = map[Opcode]*OpCodeDefinition{
 	OP_NEGATE:   {Name: "OP_NEGATE"},
 	OP_NOT:      {Name: "OP_NOT"},
 	OP_PRINT:    {Name: "OP_PRINT"},
+
+	OP_EQUALITY:     {Name: "OP_EQUALITY"},
+	OP_LARGER:       {Name: "OP_LARGER"},
+	OP_LESS:         {Name: "OP_LESS"},
+	OP_LARGER_EQUAL: {Name: "OP_LARGER_EQUAL"},
+	OP_LESS_EQUAL:   {Name: "OP_LESS_EQUAL"},
+	OP_NOT_EQUAL:    {Name: "OP_NOT_EQUAL"},
 
 	// All opcodes for global variables have a single operand which takes two bytes of memory.
 	// The operand will be the name index
@@ -187,7 +203,20 @@ func DiassembleInstruction(instruction []byte) (string, error) {
 		operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
 		diassembled = fmt.Sprintf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, def.OperandWidths[0])
 
-	case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END, OP_PRINT:
+	case OP_ADD,
+		OP_SUBTRACT,
+		OP_DIVIDE,
+		OP_MULTIPLY,
+		OP_NEGATE,
+		OP_NOT,
+		OP_END,
+		OP_PRINT,
+		OP_EQUALITY,
+		OP_LARGER,
+		OP_LESS,
+		OP_LARGER_EQUAL,
+		OP_LESS_EQUAL,
+		OP_NOT_EQUAL:
 		diassembled = fmt.Sprintf("opcode: %s, operand: %s, operand widths: %d bytes", def.Name, "None", 0)
 	}
 
