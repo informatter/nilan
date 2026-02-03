@@ -50,6 +50,9 @@ const (
 	OP_NOT      Opcode = iota
 	OP_PRINT    Opcode = iota
 
+	OP_AND Opcode = iota
+	OP_OR  Opcode = iota
+
 	// Equality opcodes
 	OP_EQUALITY  Opcode = iota
 	OP_NOT_EQUAL Opcode = iota
@@ -95,6 +98,9 @@ var definitions = map[Opcode]*OpCodeDefinition{
 	OP_LARGER_EQUAL: {Name: "OP_LARGER_EQUAL"},
 	OP_LESS_EQUAL:   {Name: "OP_LESS_EQUAL"},
 	OP_NOT_EQUAL:    {Name: "OP_NOT_EQUAL"},
+
+	OP_AND: {Name: "OP_AND"},
+	OP_OR:  {Name: "OP_OR"},
 
 	// All opcodes for global variables have a single operand which takes two bytes of memory.
 	// The operand will be the name index
@@ -216,6 +222,8 @@ func DiassembleInstruction(instruction []byte) (string, error) {
 		OP_LESS,
 		OP_LARGER_EQUAL,
 		OP_LESS_EQUAL,
+		OP_AND,
+		OP_OR,
 		OP_NOT_EQUAL:
 		diassembled = fmt.Sprintf("opcode: %s, operand: %s, operand widths: %d bytes", def.Name, "None", 0)
 	}
