@@ -109,6 +109,11 @@ func isNumeric(value any) bool {
 	return isFloat(value) || isInt(value)
 }
 
+func isBool(val any) bool {
+	_, ok := val.(bool)
+	return ok
+}
+
 // Attempts to convert a literal value into a int64.
 //
 // Parameters:
@@ -331,6 +336,13 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 			}
 			instructionLength = l
 
+		case compiler.OP_AND, compiler.OP_OR:
+			l, err := vm.execLogicalInstruction(opCode)
+			if err != nil {
+				return err
+			}
+			instructionLength = l
+
 		case compiler.OP_DEFINE_GLOBAL, compiler.OP_SET_GLOBAL:
 			instructionLength = vm.execDefineGlobalInstruction(bytecode)
 		case compiler.OP_GET_GLOBAL:
@@ -384,6 +396,31 @@ func (vm *VirtualMachine) execComparisonInstruction(opCode compiler.Opcode) (int
 		return 0, err
 	}
 	return compiler.OPCODE_TOTAL_BYTES, nil
+}
+
+// execLogicalInstruction executes logical operations (AND, OR) on the VM's stack.
+func (vm *VirtualMachine) execLogicalInstruction(opCode compiler.Opcode) (int, error) {
+	if opCode == compiler.OP_AND {
+		b := vm.stack.Pop()
+		a := vm.stack.Pop()
+
+		if isBool(a) && isBool(b) {
+			vm.stack.Push(a.(bool) && b.(bool))
+		} else {
+			return 0, RuntimeError{Message: "operands must be boolean values"}
+		}
+	}
+	if opCode == compiler.OP_OR {
+		b := vm.stack.Pop()
+		a := vm.stack.Pop()
+		if isBool(a) && isBool(b) {
+			vm.stack.Push(a.(bool) || b.(bool))
+		} else {
+			return 0, RuntimeError{Message: "operands must be boolean values"}
+		}
+	}
+	return compiler.OPCODE_TOTAL_BYTES, nil
+
 }
 
 // execDefineGlobalInstruction defines a global variable, and assigns the corresponding
