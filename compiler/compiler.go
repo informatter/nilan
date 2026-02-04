@@ -640,8 +640,22 @@ func (ac *ASTCompiler) VisitVarStmt(varStmt ast.VarStmt) any {
 	return nil
 }
 
+// VisitBlockStmt compiles a block statement by sequentially compiling each statement 
+// in the block.
 func (ac *ASTCompiler) VisitBlockStmt(blockStmt ast.BlockStmt) any {
-	panic("Block statements not yet supported in bytecode compilation")
+	
+	for _, stmt := range blockStmt.Statements {
+		func() {
+			//NOTE: Catch panics per statement to avoid aborting the whole loop
+			defer func() {
+				if r := recover(); r != nil {
+					panic(r)
+				}
+			}()
+			stmt.Accept(ac)
+		}()
+	}
+	return nil
 }
 
 func (ac *ASTCompiler) VisitIfStmt(ifStmt ast.IfStmt) any {
