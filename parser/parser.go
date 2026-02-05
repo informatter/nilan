@@ -205,7 +205,7 @@ func (parser *Parser) declaration() (ast.Stmt, error) {
 
 // variableDeclaration parses a variable declaration statement.
 // It expects an identifier token for the variable name
-// followed by an '=' and an initializer expression.
+// followed by an optional '=' and an initializer expression.
 // Returns:
 //   - ast.VarStmt: A VarStmt AST node epresenting the variable declaration.
 //   - error: A SyntaxError if parsing fails or if the variable has not been initialised.
