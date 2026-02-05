@@ -25,6 +25,69 @@ func assertBytecodeEquals(t *testing.T, got Bytecode, want Bytecode) {
 	}
 }
 
+func TestASTCompilerVisitIfStmt(t *testing.T) {
+	tests := []struct {
+		name  string
+		stmts []ast.Stmt
+		want  Bytecode
+	}{
+		{
+			name: "if(true){print(1)}else{print(2)}",
+			stmts: []ast.Stmt{
+				ast.IfStmt{
+					Condition: ast.Literal{Value: true},
+					Then:      ast.PrintStmt{Expression: ast.Literal{Value: int64(1)}},
+					Else:      ast.PrintStmt{Expression: ast.Literal{Value: int64(2)}},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // true
+					byte(OP_JUMP_IF_FALSE), 0, 13, // jump to else (offset 13)
+					byte(OP_CONSTANT), 0, 1, // 1
+					byte(OP_PRINT),
+					byte(OP_JUMP), 0, 17, // jump to end (offset 17)
+					byte(OP_CONSTANT), 0, 2, // 2
+					byte(OP_PRINT),
+					byte(OP_END),
+				},
+				ConstantsPool: []any{true, int64(1), int64(2)},
+			},
+		},
+		{
+
+			name: "if (true){print(42)}",
+			stmts: []ast.Stmt{
+				ast.IfStmt{
+					Condition: ast.Literal{Value: true},
+					Then:      ast.PrintStmt{Expression: ast.Literal{Value: int64(42)}},
+					Else:      nil,
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // true
+					byte(OP_JUMP_IF_FALSE), 0, 10, // jump past then (offset 10)
+					byte(OP_CONSTANT), 0, 1, // 42
+					byte(OP_PRINT),
+					byte(OP_END),
+				},
+				ConstantsPool: []any{true, int64(42)},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			compiler := NewASTCompiler()
+			bytecode, err := compiler.CompileAST(tt.stmts)
+			if err != nil {
+				t.Fatalf("compilation error: %v", err)
+			}
+			assertBytecodeEquals(t, bytecode, tt.want)
+		})
+	}
+}
+
 func TestCompilerPrintStatement(t *testing.T) {
 	tests := []struct {
 		name             string
