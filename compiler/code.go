@@ -26,11 +26,17 @@ type Instructions []byte
 // All opcodes take up 1 byte of memory
 const OPCODE_TOTAL_BYTES int = 1
 
-// constant opcode takes up 3 bytes of memory
+// constant opcode takes up 3 bytes of memory,
+// 1 byte for the opcode and 2 bytes for the operand which represents the index of the constant
+// in the constants pool
 const OP_CONSTANT_TOTAL_BYTES = 3
 
+// any jump upcode takes a total of 3 bytes of memory,
+// 1 byte for the opcode and 2 bytes for the operand which represents the jump offset
+const OP_JUMP_TOTAL_BYTES = 3
+
 // opcodes
-// iota generates a distinct byte for each bytecode
+// iota generates a distinct byte for each bytecode.
 const (
 	// represents a opcode constant with a single operand with a size of
 	// 2 bytes, which represents a `uint16`.
@@ -66,6 +72,9 @@ const (
 	OP_DEFINE_GLOBAL Opcode = iota
 	OP_SET_GLOBAL    Opcode = iota
 	OP_GET_GLOBAL    Opcode = iota
+
+	OP_JUMP          Opcode = iota
+	OP_JUMP_IF_FALSE Opcode = iota
 )
 
 // Represents a definition of an opcode.
@@ -77,6 +86,10 @@ type OpCodeDefinition struct {
 	OperandWidths []int
 }
 
+// NOTE: Each opcode currently takes a maximum of
+// 3 bytes of memory, 1 byte for the opcode and 2 bytes for the operand.
+// Currently the smallest opcode instructions take up 1 byte of memory,
+// which is the opcode byte itself.
 var definitions = map[Opcode]*OpCodeDefinition{
 	// has a single operand which takes two bytes of memory.
 	OP_CONSTANT: {Name: "OP_CONSTANT", OperandWidths: []int{2}},
@@ -101,6 +114,19 @@ var definitions = map[Opcode]*OpCodeDefinition{
 
 	OP_AND: {Name: "OP_AND"},
 	OP_OR:  {Name: "OP_OR"},
+
+	// These opcodes are used for control flow and have a single operand which takes
+	// two bytes of memory. The operan represents the jump offset,
+	// which is the number of bytes to jump forward or backward in the instruction set.
+
+	//
+	OP_JUMP: {Name: "OP_JUMP", OperandWidths: []int{2}},
+
+	// OP_JUMP_IF_FALSE has an operand which determines how many bytes to
+	// jump forward to the next instruction if the `if` condition is false.
+	// This could either be jump to the `else` block or to the end of the `if`
+	// statement if there is no `else` block.
+	OP_JUMP_IF_FALSE: {Name: "OP_JUMP_IF_FALSE", OperandWidths: []int{2}},
 
 	// All opcodes for global variables have a single operand which takes two bytes of memory.
 	// The operand will be the name index
@@ -140,7 +166,7 @@ func Get(op Opcode) (*OpCodeDefinition, error) {
 // Example:
 //
 //	// Suppose OP_CONSTANT expects a 2-byte operand (index into constants table).
-//	instr := MakeBytecode(OP_CONSTANT, 42)
+//	instr := AssembleInstruction(OP_CONSTANT, 42)
 //	// instr now contains: [<opcode for OP_CONSTANT>, 0x00, 0x2A]
 func AssembleInstruction(op Opcode, operands ...int) ([]byte, error) {
 	def, err := Get(op)
@@ -205,7 +231,12 @@ func DiassembleInstruction(instruction []byte) (string, error) {
 
 	var diassembled string
 	switch opcode {
-	case OP_CONSTANT, OP_DEFINE_GLOBAL, OP_SET_GLOBAL, OP_GET_GLOBAL:
+	case OP_CONSTANT,
+		OP_DEFINE_GLOBAL,
+		OP_SET_GLOBAL,
+		OP_GET_GLOBAL,
+		OP_JUMP,
+		OP_JUMP_IF_FALSE:
 		operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
 		diassembled = fmt.Sprintf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, def.OperandWidths[0])
 
