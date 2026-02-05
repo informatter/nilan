@@ -169,14 +169,33 @@ func makeComparisonHandler(f equalityFuncFloat, i equalityFuncInt) comparisonOpH
 
 }
 
+func isFalsey(value any) bool {
+	if value == nil {
+		return true
+	}
+	if isBool(value) && value.(bool) == false {
+		return true
+	}
+
+	// Everything else is considered to be true.
+	return false
+}
+
 // Represents a stack based virtual-machine (VirtualMachine).
 // It is the runtime environment where Nilan bytecode
 // gets executed.
 type VirtualMachine struct {
-	stack                Stack
-	ip                   int
-	debug                bool
-	globalVars           map[string]any
+
+	// stack stores intermediate values during bytecode execution,
+	// which are poped and pushed as instructions are executed.
+	stack Stack
+	// instruction pointer stores the address of the current bytecode instruction.
+	// It determines where the VM is in the program.
+	ip    int
+	debug bool
+	// globalVars stores the mapping of global variable names to their corresponding values.
+	globalVars map[string]any
+	// comparisonOpHandlers maps comparison opcodes to their corresponding handler functions.
 	comparisonOpHandlers map[compiler.Opcode]comparisonOpHandler
 }
 
@@ -343,6 +362,15 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 			}
 			instructionLength = l
 
+		// NOTE: `continue` is needed as the VM needs to jump to a target instruction
+		// instead of incrementing the instruction pointer to the next instruction in sequence.
+		case compiler.OP_JUMP:
+			vm.ip = vm.execJumpInstruction(bytecode)
+			continue
+		case compiler.OP_JUMP_IF_FALSE:
+			vm.ip = vm.execJumpIfFalseInstruction(bytecode)
+			continue
+
 		case compiler.OP_DEFINE_GLOBAL, compiler.OP_SET_GLOBAL:
 			instructionLength = vm.execDefineGlobalInstruction(bytecode)
 		case compiler.OP_GET_GLOBAL:
@@ -365,6 +393,42 @@ func (vm *VirtualMachine) execPrintInstruction() int {
 
 	fmt.Println(value)
 	return compiler.OPCODE_TOTAL_BYTES
+}
+
+// execJumpInstruction executes a `OP_JUMP` instruction by reading the target byte
+// offset from the instruction's operand and returning it.
+func (vm *VirtualMachine) execJumpInstruction(bytecode compiler.Bytecode) int {
+
+	operandIndex := vm.ip + compiler.OPCODE_TOTAL_BYTES
+	// skips the opcode byte and reads the next 2 bytes, to retrieve the
+	// operand which represents the target byte offset to jump to
+	instruction := bytecode.Instructions[operandIndex : operandIndex+2]
+	targetByteOffset := binary.BigEndian.Uint16(instruction)
+
+	return int(targetByteOffset)
+}
+
+// execJumpIfFalseInstruction executes a `OP_JUMP_IF_FALSE` instruction by evaluating the condition
+// on top of the stack and determining whether to jump to the target byte offset
+// or continue to the next instruction.
+func (vm *VirtualMachine) execJumpIfFalseInstruction(bytecode compiler.Bytecode) int {
+
+	condition := vm.stack.Pop()
+	if isFalsey(condition) {
+		operandIndex := vm.ip + compiler.OPCODE_TOTAL_BYTES
+		instruction := bytecode.Instructions[operandIndex : operandIndex+2]
+		targetByteOffset := binary.BigEndian.Uint16(instruction)
+		// If the condition is falsey, the VM should jump to the beginning of the
+		// else block (or the end of the if statement if there is no else block),
+		// which is located at the byte offset specified by the instruction's operand.
+		return int(targetByteOffset)
+	}
+
+	// if the condition is truthy, the VM should continue executing the next
+	// instruction, which is located immediatelty after the currrent instructions
+	// opcode and operand bytes.
+
+	return vm.ip + compiler.OP_JUMP_TOTAL_BYTES
 }
 
 // execEqualityInstruction executes equality or inequality operations based on the provided opcode.
