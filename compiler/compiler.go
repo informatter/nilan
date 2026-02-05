@@ -395,7 +395,7 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 	for ip <= totalInstructions {
 		opCode := Opcode(ac.bytecode.Instructions[ip])
 		switch opCode {
-		case OP_ADD, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END:
+		case OP_ADD, OP_PRINT, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END:
 
 			result, err := DiassembleInstruction([]byte{ac.bytecode.Instructions[ip]})
 			if err != nil {
@@ -408,11 +408,16 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 			builder.WriteString("\n")
 			instructionLength = OPCODE_TOTAL_BYTES
 
+		// Handles all opcodes which store data in the constants pool.
+		// all these opcodes have an operand (index into constants pool) with a width of 2 bytes.
 		case OP_CONSTANT, OP_DEFINE_GLOBAL, OP_SET_GLOBAL, OP_GET_GLOBAL:
 			offset := ip + OP_CONSTANT_TOTAL_BYTES
 			instruction := ac.bytecode.Instructions[ip:offset]
-			index := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
-			value := ac.bytecode.ConstantsPool[index]
+			// The operand is the index into the constants pool where the value is stored.
+			// We need to retrieve the value from the constants pool to provide a more informative disassembly.
+			// The opcode byte is ignored.
+			operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
+			value := ac.bytecode.ConstantsPool[operand]
 
 			diassembledInstr, err := DiassembleInstruction(instruction)
 			if err != nil {
@@ -422,6 +427,19 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 			builder.WriteString(result)
 			builder.WriteString("\n")
 			instructionLength = OP_CONSTANT_TOTAL_BYTES
+
+		case OP_JUMP, OP_JUMP_IF_FALSE:
+			offset := ip + OP_JUMP_TOTAL_BYTES
+			instruction := ac.bytecode.Instructions[ip:offset]
+			operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
+			diassembledInstr, err := DiassembleInstruction(instruction)
+			if err != nil {
+				panic(err.Error())
+			}
+			result := diassembledInstr + fmt.Sprintf(", byte index in instruction array: %d", operand)
+			builder.WriteString(result)
+			builder.WriteString("\n")
+			instructionLength = OP_JUMP_TOTAL_BYTES
 
 		}
 
@@ -640,10 +658,10 @@ func (ac *ASTCompiler) VisitVarStmt(varStmt ast.VarStmt) any {
 	return nil
 }
 
-// VisitBlockStmt compiles a block statement by sequentially compiling each statement 
+// VisitBlockStmt compiles a block statement by sequentially compiling each statement
 // in the block.
 func (ac *ASTCompiler) VisitBlockStmt(blockStmt ast.BlockStmt) any {
-	
+
 	for _, stmt := range blockStmt.Statements {
 		func() {
 			//NOTE: Catch panics per statement to avoid aborting the whole loop
@@ -659,11 +677,76 @@ func (ac *ASTCompiler) VisitBlockStmt(blockStmt ast.BlockStmt) any {
 }
 
 func (ac *ASTCompiler) VisitIfStmt(ifStmt ast.IfStmt) any {
-	panic("If statements not yet supported in bytecode compilation")
+
+	// compile the condition expression statement first
+	ifStmt.Condition.Accept(ac)
+
+	jumpIfFalsePatch := len(ac.bytecode.Instructions)
+	// For example, the intructions would now be something like: [..., OP_JUMP_IF_FALSE,  0x00, 0x00]
+	// where `0x00, 0x0` are the placeholder operand bytes.
+	ac.emit(OP_JUMP_IF_FALSE, 0) // placeholder operand to be patched later
+
+	// compile the then branch
+	ifStmt.Then.Accept(ac)
+
+	if ifStmt.Else != nil {
+		// If there is an else branch, we need to emit a jump instruction to skip over
+		// after executing the then branch.
+		jumpPatch := len(ac.bytecode.Instructions)
+		ac.emit(OP_JUMP, 0)
+
+		// Modify the operand of the OP_JUMP_IF_FALSE instruction defined at the beginning.
+		// This allows the VM to correctly jump to the start of the else branch, if the then
+		// branch condition is false.
+		elsePos := len(ac.bytecode.Instructions)
+		ac.patchJump(jumpIfFalsePatch, elsePos)
+
+		ifStmt.Else.Accept(ac)
+
+		// After compiling the else branch, we need to patch the jump instruction emitted
+		// to jump to the end of the else branch.
+		endPos := len(ac.bytecode.Instructions)
+		ac.patchJump(jumpPatch, endPos)
+	} else {
+		// if there is no else branch, the `OP_JUMP_IF_FALSE` instruction emitted at the beginning
+		// should skip past the then branch.
+		afterPos := len(ac.bytecode.Instructions)
+		ac.patchJump(jumpIfFalsePatch, afterPos)
+	}
+
+	return nil
 }
 
 func (ac *ASTCompiler) VisitWhileStmt(whileStmt ast.WhileStmt) any {
 	panic("While statements not yet supported in bytecode compilation")
+}
+
+// patchjump overwrites a jump instruction's operand with the actual correct byte offset.
+// When compiling if statements, its not possible to know the else branch (or the statement after
+// the if) will be until the then-branch is compiled. Jump instructions are emmited with placeholder operands,
+// then later call patchJump to fix those operands.
+
+// The jumpPos is the byte index where the jump instruction's OPCODE is located.
+//
+//	This is the position BEFORE the jump was emitted
+//
+// The targetPos is the byte index where the jump instruction should jump to.
+// Example:
+// jumpPos = 10, targetPos = 20
+// Before patching: [..., OP_JUMP_IF_FALSE, 0x00, 0x00, ...] (jump instruction starts at index 10)
+// After patching: [..., OP_JUMP_IF_FALSE, 0x00, 0x0A, ...] (jump instruction now correctly jumps to index 20)
+func (ac *ASTCompiler) patchJump(jumpPos int, targetPos int) {
+
+	operandPos := jumpPos + OPCODE_TOTAL_BYTES
+
+	instruction := make([]byte, 2)
+	binary.BigEndian.PutUint16(instruction, uint16(targetPos))
+
+	// override the 2-byte placeholder operand in the instruction array with
+	// the correct operand bytes that will make the jump instruction jump to the target position.
+	ac.bytecode.Instructions[operandPos] = instruction[0]
+	ac.bytecode.Instructions[operandPos+1] = instruction[1]
+
 }
 
 // addConstant appends a value to the constant pool and emits an OP_CONSTANT instruction.
