@@ -18,7 +18,7 @@ import (
 type replCompiledCmd struct {
 	diassemble   bool
 	dumpBytecode bool
-	printAST     bool
+	dumpAST      bool
 }
 
 func (*replCompiledCmd) Name() string { return "cRepl" }
@@ -32,9 +32,10 @@ func (*replCompiledCmd) Usage() string {
 func (cmd *replCompiledCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.diassemble, "diassemble", false, "diassemble the bytecode and dump it to a .dnic file")
 	f.BoolVar(&cmd.dumpBytecode, "dumpBytecode", false, "Writes the encoded bytecode as hexadecimal to a .nic file")
-	f.BoolVar(&cmd.printAST, "printAST", false, "Prints the AST to console")
+	f.BoolVar(&cmd.dumpAST, "dumpAST", false, "Writes the AST as JSON to a file")
 	f.BoolVar(&cmd.diassemble, "di", false, "Shorthand for diassemble.")
 	f.BoolVar(&cmd.dumpBytecode, "du", false, "Shorthand for dumpBytecode")
+	f.BoolVar(&cmd.dumpAST, "da", false, "Shorthand for dumpAST.")
 
 }
 
@@ -111,8 +112,12 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 				fmt.Fprintf(os.Stderr, "💥 Dump bytecode error:\n:\t%s", err.Error())
 			}
 		}
-		if cmd.printAST {
-			parser.Print(statements)
+		if cmd.dumpAST {
+			err := parser.PrintToFile(statements, "ast.json")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "💥 Dump AST error:\n:\t%s", err.Error())
+				continue
+			}
 		}
 
 		runtimeErr := vm.Run(bytecode)
