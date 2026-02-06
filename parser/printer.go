@@ -12,30 +12,100 @@ const (
 	colorReset  = "\033[0m"
 )
 
+type blockStmtJSON struct {
+	Type       string `json:"type"`
+	Statements []any  `json:"statements"`
+}
+
+type expressionStmtJSON struct {
+	Type       string `json:"type"`
+	Expression any    `json:"expression"`
+}
+
+type printStmtJSON struct {
+	Type       string `json:"type"`
+	Expression any    `json:"expression"`
+}
+
+type varStmtJSON struct {
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	Initializer any    `json:"initializer"`
+}
+
+type whileStmtJSON struct {
+	Type      string `json:"type"`
+	Condition any    `json:"condition"`
+	Body      any    `json:"body"`
+}
+
+type ifStmtJSON struct {
+	Type      string `json:"type"`
+	Condition any    `json:"condition"`
+	Then      any    `json:"then"`
+	Else      any    `json:"else"`
+}
+
+type assignExprJSON struct {
+	Type  string `json:"type"`
+	Name  string `json:"name"`
+	Value any    `json:"value"`
+}
+
+type logicalExprJSON struct {
+	Type     string `json:"type"`
+	Operator string `json:"operator"`
+	Left     any    `json:"left"`
+	Right    any    `json:"right"`
+}
+
+type groupingExprJSON struct {
+	Type       string `json:"type"`
+	Expression any    `json:"expression"`
+}
+
+type variableExprJSON struct {
+	Type string `json:"type"`
+	Name string `json:"name"`
+}
+
+type binaryExprJSON struct {
+	Type     string `json:"type"`
+	Operator string `json:"operator"`
+	Left     any    `json:"left"`
+	Right    any    `json:"right"`
+}
+
+type unaryExprJSON struct {
+	Type     string `json:"type"`
+	Operator string `json:"operator"`
+	Right    any    `json:"right"`
+}
+
 // astPrinter implements the Visitor interfaces and builds a
 // JSON-friendly representation of the AST using maps and slices.
 // Each Visit method returns an object that can be marshaled to JSON.
 type astPrinter struct{}
 
 func (p astPrinter) VisitExpressionStmt(exprStmt ast.ExpressionStmt) any {
-	return map[string]any{
-		"type":       "ExpressionStmt",
-		"expression": exprStmt.Expression.Accept(p),
+	return expressionStmtJSON{
+		Type:       "ExpressionStmt",
+		Expression: exprStmt.Expression.Accept(p),
 	}
 }
 
 func (p astPrinter) VisitPrintStmt(printStmt ast.PrintStmt) any {
-	return map[string]any{
-		"type":       "PrintStmt",
-		"expression": printStmt.Expression.Accept(p),
+	return printStmtJSON{
+		Type:       "PrintStmt",
+		Expression: printStmt.Expression.Accept(p),
 	}
 }
 
 func (p astPrinter) VisitVarStmt(varStmt ast.VarStmt) any {
-	return map[string]any{
-		"type":        "VarStmt",
-		"name":        varStmt.Name.Lexeme,
-		"initializer": nilOrAccept(varStmt.Initializer, p),
+	return varStmtJSON{
+		Type:        "VarStmt",
+		Name:        varStmt.Name.Lexeme,
+		Initializer: nilOrAccept(varStmt.Initializer, p),
 	}
 }
 
@@ -44,17 +114,17 @@ func (p astPrinter) VisitBlockStmt(blockStmt ast.BlockStmt) any {
 	for _, stmt := range blockStmt.Statements {
 		stmts = append(stmts, stmt.Accept(p))
 	}
-	return map[string]any{
-		"type":       "BlockStmt",
-		"statements": stmts,
+	return blockStmtJSON{
+		Type:       "BlockStmt",
+		Statements: stmts,
 	}
 }
 
 func (p astPrinter) VisitWhileStmt(stmt ast.WhileStmt) any {
-	return map[string]any{
-		"type":      "WhileStmt",
-		"condition": stmt.Condition.Accept(p),
-		"body":      stmt.Body.Accept(p),
+	return whileStmtJSON{
+		Type:      "WhileStmt",
+		Condition: stmt.Condition.Accept(p),
+		Body:      stmt.Body.Accept(p),
 	}
 }
 
@@ -65,52 +135,52 @@ func (p astPrinter) VisitIfStmt(stmt ast.IfStmt) any {
 	} else {
 		elseVal = nil
 	}
-	return map[string]any{
-		"type":      "IfStmt",
-		"condition": stmt.Condition.Accept(p),
-		"then":      stmt.Then.Accept(p),
-		"else":      elseVal,
+	return ifStmtJSON{
+		Type:      "IfStmt",
+		Condition: stmt.Condition.Accept(p),
+		Then:      stmt.Then.Accept(p),
+		Else:      elseVal,
 	}
 }
 
 func (p astPrinter) VisitLogicalExpression(expr ast.Logical) any {
-	return map[string]any{
-		"type":     "Logical",
-		"operator": expr.Operator.Lexeme,
-		"left":     expr.Left.Accept(p),
-		"right":    expr.Right.Accept(p),
+	return logicalExprJSON{
+		Type:     "Logical",
+		Operator: expr.Operator.Lexeme,
+		Left:     expr.Left.Accept(p),
+		Right:    expr.Right.Accept(p),
 	}
 }
 
 func (p astPrinter) VisitAssignExpression(assign ast.Assign) any {
-	return map[string]any{
-		"type":  "Assign",
-		"name":  assign.Name.Lexeme,
-		"value": assign.Value.Accept(p),
+	return assignExprJSON{
+		Type:  "Assign",
+		Name:  assign.Name.Lexeme,
+		Value: assign.Value.Accept(p),
 	}
 }
 
 func (p astPrinter) VisitVariableExpression(variable ast.Variable) any {
-	return map[string]any{
-		"type": "Variable",
-		"name": variable.Name.Lexeme,
+	return variableExprJSON{
+		Type: "Variable",
+		Name: variable.Name.Lexeme,
 	}
 }
 
 func (p astPrinter) VisitBinary(b ast.Binary) any {
-	return map[string]any{
-		"type":     "Binary",
-		"operator": b.Operator.Lexeme,
-		"left":     b.Left.Accept(p),
-		"right":    b.Right.Accept(p),
+	return binaryExprJSON{
+		Type:     "Binary",
+		Operator: b.Operator.Lexeme,
+		Left:     b.Left.Accept(p),
+		Right:    b.Right.Accept(p),
 	}
 }
 
 func (p astPrinter) VisitUnary(u ast.Unary) any {
-	return map[string]any{
-		"type":     "Unary",
-		"operator": u.Operator.Lexeme,
-		"right":    u.Right.Accept(p),
+	return unaryExprJSON{
+		Type:     "Unary",
+		Operator: u.Operator.Lexeme,
+		Right:    u.Right.Accept(p),
 	}
 }
 
@@ -120,9 +190,9 @@ func (p astPrinter) VisitLiteral(l ast.Literal) any {
 }
 
 func (p astPrinter) VisitGrouping(g ast.Grouping) any {
-	return map[string]any{
-		"type":       "Grouping",
-		"expression": g.Expression.Accept(p),
+	return groupingExprJSON{
+		Type:       "Grouping",
+		Expression: g.Expression.Accept(p),
 	}
 }
 
