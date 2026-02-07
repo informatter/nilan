@@ -13,6 +13,7 @@ func main() {
 	subcommands.Register(&replCmd{}, "tree-walk-interpreter")
 	subcommands.Register(&emitBytecodeCmd{}, "compiler")
 	subcommands.Register(&replCompiledCmd{}, "compiler")
+	subcommands.Register(&runCompiledCmd{}, "compiler")
 	flag.Parse()
 	ctx := context.Background()
 	os.Exit(int(subcommands.Execute(ctx)))
