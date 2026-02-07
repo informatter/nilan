@@ -304,6 +304,11 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 				fmt.Println(vm.stack.Peek())
 			}
 			return nil
+
+		case compiler.OP_POP:
+			vm.stack.Pop()
+			instructionLength = compiler.OPCODE_TOTAL_BYTES
+
 		case compiler.OP_PRINT:
 			l := vm.execPrintInstruction()
 			instructionLength = l
@@ -413,7 +418,7 @@ func (vm *VirtualMachine) execJumpInstruction(bytecode compiler.Bytecode) int {
 // or continue to the next instruction.
 func (vm *VirtualMachine) execJumpIfFalseInstruction(bytecode compiler.Bytecode) int {
 
-	condition := vm.stack.Pop()
+	condition := vm.stack.Peek()
 	if isFalsey(condition) {
 		operandIndex := vm.ip + compiler.OPCODE_TOTAL_BYTES
 		instruction := bytecode.Instructions[operandIndex : operandIndex+2]

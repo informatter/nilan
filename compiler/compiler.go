@@ -395,7 +395,7 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 	for ip <= totalInstructions {
 		opCode := Opcode(ac.bytecode.Instructions[ip])
 		switch opCode {
-		case OP_ADD, OP_PRINT, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END:
+		case OP_ADD, OP_PRINT, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END, OP_POP:
 
 			result, err := DiassembleInstruction([]byte{ac.bytecode.Instructions[ip]})
 			if err != nil {
@@ -676,49 +676,76 @@ func (ac *ASTCompiler) VisitBlockStmt(blockStmt ast.BlockStmt) any {
 	return nil
 }
 
+// VisitIfStmt compiles an if or if-else statement by emitting bytecode.
+// It uses backpatching to resolve jump offsets for branching.
 func (ac *ASTCompiler) VisitIfStmt(ifStmt ast.IfStmt) any {
 
-	// compile the condition expression statement first
+	// compile the condition expression first
 	ifStmt.Condition.Accept(ac)
 
 	jumpIfFalsePatch := len(ac.bytecode.Instructions)
 	// For example, the intructions would now be something like: [..., OP_JUMP_IF_FALSE,  0x00, 0x00]
 	// where `0x00, 0x0` are the placeholder operand bytes.
-	ac.emit(OP_JUMP_IF_FALSE, 0) // placeholder operand to be patched later
+	ac.emit(OP_JUMP_IF_FALSE, 0)
 
-	// compile the then branch
 	ifStmt.Then.Accept(ac)
 
 	if ifStmt.Else != nil {
-		// If there is an else branch, we need to emit a jump instruction to skip over
-		// after executing the then branch.
+		// If there is an "else" branch, emit a jump instruction to skip over it after executing the "then" branch.
 		jumpPatch := len(ac.bytecode.Instructions)
 		ac.emit(OP_JUMP, 0)
 
-		// Modify the operand of the OP_JUMP_IF_FALSE instruction defined at the beginning.
-		// This allows the VM to correctly jump to the start of the else branch, if the then
-		// branch condition is false.
+		// Patch the operand of the OP_JUMP_IF_FALSE instruction defined at the beginning.
+		// This allows the VM to correctly jump to the start of the "else" branch, if the "then"
+		// branch condition evaluates false.
 		elsePos := len(ac.bytecode.Instructions)
 		ac.patchJump(jumpIfFalsePatch, elsePos)
 
 		ifStmt.Else.Accept(ac)
 
-		// After compiling the else branch, we need to patch the jump instruction emitted
-		// to jump to the end of the else branch.
+		ac.emit(OP_POP)
 		endPos := len(ac.bytecode.Instructions)
+		// Patch the operand of `OP_JUMP` so the VM can jump to the end of the "else" branch.
 		ac.patchJump(jumpPatch, endPos)
 	} else {
-		// if there is no else branch, the `OP_JUMP_IF_FALSE` instruction emitted at the beginning
-		// should skip past the then branch.
+		// If there is no "else" branch, patch the OP_JUMP_IF_FALSE so that
+		// control jumps to the instruction after the "then" branch when
+		// the condition is false.
 		afterPos := len(ac.bytecode.Instructions)
 		ac.patchJump(jumpIfFalsePatch, afterPos)
+
+		// Emits `OP_POP` so the VM can pop the condition expression's value from the stack.
+		ac.emit(OP_POP)
 	}
 
 	return nil
 }
 
 func (ac *ASTCompiler) VisitWhileStmt(whileStmt ast.WhileStmt) any {
-	panic("While statements not yet supported in bytecode compilation")
+
+	loopstartPos := len(ac.bytecode.Instructions)
+
+	// compile the condition expression first
+	whileStmt.Condition.Accept(ac)
+
+	jumpIfFalsePatch := len(ac.bytecode.Instructions)
+	ac.emit(OP_JUMP_IF_FALSE, 0) // placeholder operand to be patched later
+
+	// compile the loop body
+	whileStmt.Body.Accept(ac)
+
+	// After compiling the loop body, we need to emit a jump instruction
+	// so the VM can jump back to the start of the loop condition.
+	ac.emit(OP_POP)
+	ac.emit(OP_JUMP, loopstartPos)
+
+	// if the while condition is false, the VM needs to jump to the end of the loop body,
+	// which is the current position in the instruction array.
+	loopEndPos := len(ac.bytecode.Instructions)
+	ac.patchJump(jumpIfFalsePatch, loopEndPos)
+	ac.emit(OP_POP)
+
+	return nil
 }
 
 // patchjump overwrites a jump instruction's operand with the actual correct byte offset.
