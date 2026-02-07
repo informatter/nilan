@@ -65,9 +65,10 @@ func TestVM_JumpInstructions_IfElse(t *testing.T) {
 			bytecode: compiler.Bytecode{
 				Instructions: []byte{
 					byte(compiler.OP_CONSTANT), 0, 0, // true
-					byte(compiler.OP_JUMP_IF_FALSE), 0, 10, // jump to end if false
+					byte(compiler.OP_JUMP_IF_FALSE), 0, 12, // jump to end if false
 					byte(compiler.OP_CONSTANT), 0, 1, // 42
 					byte(compiler.OP_PRINT),
+					byte(compiler.OP_POP),
 					byte(compiler.OP_END),
 				},
 				ConstantsPool: []any{true, int64(42)},
@@ -84,6 +85,7 @@ func TestVM_JumpInstructions_IfElse(t *testing.T) {
 					byte(compiler.OP_JUMP_IF_FALSE), 0, 10, // jump to end if false
 					byte(compiler.OP_CONSTANT), 0, 1, // 42
 					byte(compiler.OP_PRINT),
+					byte(compiler.OP_POP),
 					byte(compiler.OP_END),
 				},
 				ConstantsPool: []any{false, int64(42)},
@@ -102,11 +104,12 @@ func TestVM_JumpInstructions_IfElse(t *testing.T) {
 					byte(compiler.OP_JUMP), 0, 17, // jump to end
 					byte(compiler.OP_CONSTANT), 0, 2, // 2
 					byte(compiler.OP_PRINT),
+					byte(compiler.OP_POP),
 					byte(compiler.OP_END),
 				},
 				ConstantsPool: []any{true, int64(1), int64(2)},
 			},
-			expectedStack: []any{}, // only 1 printed
+			expectedStack: []any{},
 		},
 		{
 
@@ -116,12 +119,13 @@ func TestVM_JumpInstructions_IfElse(t *testing.T) {
 			bytecode: compiler.Bytecode{
 				Instructions: []byte{
 					byte(compiler.OP_CONSTANT), 0, 0, // false
-					byte(compiler.OP_JUMP_IF_FALSE), 0, 13, // jump to else
+					byte(compiler.OP_JUMP_IF_FALSE), 0, 13, // jump to else block
 					byte(compiler.OP_CONSTANT), 0, 1, // 1
 					byte(compiler.OP_PRINT),
-					byte(compiler.OP_JUMP), 0, 17, // jump to end
+					byte(compiler.OP_JUMP), 0, 17, // jump to pop instruction
 					byte(compiler.OP_CONSTANT), 0, 2, // 2
 					byte(compiler.OP_PRINT),
+					byte(compiler.OP_POP),
 					byte(compiler.OP_END),
 				},
 				ConstantsPool: []any{false, int64(1), int64(2)},
