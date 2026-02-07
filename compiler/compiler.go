@@ -395,7 +395,8 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 	for ip <= totalInstructions {
 		opCode := Opcode(ac.bytecode.Instructions[ip])
 		switch opCode {
-		case OP_ADD, OP_PRINT, OP_SUBTRACT, OP_DIVIDE, OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END, OP_POP:
+		case OP_ADD, OP_LESS, OP_LARGER, OP_PRINT, OP_SUBTRACT, OP_DIVIDE,
+			OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END, OP_POP:
 
 			result, err := DiassembleInstruction([]byte{ac.bytecode.Instructions[ip]})
 			if err != nil {
@@ -703,7 +704,6 @@ func (ac *ASTCompiler) VisitIfStmt(ifStmt ast.IfStmt) any {
 
 		ifStmt.Else.Accept(ac)
 
-		ac.emit(OP_POP)
 		endPos := len(ac.bytecode.Instructions)
 		// Patch the operand of `OP_JUMP` so the VM can jump to the end of the "else" branch.
 		ac.patchJump(jumpPatch, endPos)
@@ -713,11 +713,9 @@ func (ac *ASTCompiler) VisitIfStmt(ifStmt ast.IfStmt) any {
 		// the condition is false.
 		afterPos := len(ac.bytecode.Instructions)
 		ac.patchJump(jumpIfFalsePatch, afterPos)
-
-		// Emits `OP_POP` so the VM can pop the condition expression's value from the stack.
-		ac.emit(OP_POP)
 	}
-
+	// Emits `OP_POP` so the VM can pop the condition expression's value from the stack.
+	ac.emit(OP_POP)
 	return nil
 }
 
