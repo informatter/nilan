@@ -75,6 +75,9 @@ const (
 
 	OP_JUMP          Opcode = iota
 	OP_JUMP_IF_FALSE Opcode = iota
+
+	// OP_POP is used to pop a value from the VM's stack.
+	OP_POP Opcode = iota
 )
 
 // Represents a definition of an opcode.
@@ -114,6 +117,8 @@ var definitions = map[Opcode]*OpCodeDefinition{
 
 	OP_AND: {Name: "OP_AND"},
 	OP_OR:  {Name: "OP_OR"},
+
+	OP_POP: {Name: "OP_POP"},
 
 	// These opcodes are used for control flow and have a single operand which takes
 	// two bytes of memory. The operan represents the jump offset,
@@ -255,6 +260,7 @@ func DiassembleInstruction(instruction []byte) (string, error) {
 		OP_LESS_EQUAL,
 		OP_AND,
 		OP_OR,
+		OP_POP,
 		OP_NOT_EQUAL:
 		diassembled = fmt.Sprintf("opcode: %s, operand: %s, operand widths: %d bytes", def.Name, "None", 0)
 	}
