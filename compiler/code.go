@@ -73,6 +73,11 @@ const (
 	OP_SET_GLOBAL    Opcode = iota
 	OP_GET_GLOBAL    Opcode = iota
 
+	// Opcodes for local variables
+	OP_DEFINE_LOCAL Opcode = iota
+	OP_SET_LOCAL    Opcode = iota
+	OP_GET_LOCAL    Opcode = iota
+
 	OP_JUMP          Opcode = iota
 	OP_JUMP_IF_FALSE Opcode = iota
 
@@ -138,6 +143,12 @@ var definitions = map[Opcode]*OpCodeDefinition{
 	OP_DEFINE_GLOBAL: {Name: "OP_DEFINE_GLOBAL", OperandWidths: []int{2}},
 	OP_GET_GLOBAL:    {Name: "OP_GET_GLOBAL", OperandWidths: []int{2}},
 	OP_SET_GLOBAL:    {Name: "OP_SET_GLOBAL", OperandWidths: []int{2}},
+
+	// All opcodes for global variables have a single operand which takes two bytes of memory.
+	// The operand will be the name index
+	OP_DEFINE_LOCAL: {Name: "OP_DEFINE_LOCAL", OperandWidths: []int{2}},
+	OP_GET_LOCAL:    {Name: "OP_GET_LOCAL", OperandWidths: []int{2}},
+	OP_SET_LOCAL:    {Name: "OP_SET_LOCAL", OperandWidths: []int{2}},
 }
 
 func Get(op Opcode) (*OpCodeDefinition, error) {
@@ -196,9 +207,7 @@ func AssembleInstruction(op Opcode, operands ...int) ([]byte, error) {
 		case 2:
 			// Handles all opcodes with operand width of 2 bytes
 			binary.BigEndian.PutUint16(instruction[offset:], uint16(operand))
-		case 1:
-			// Handles all opcodes with operand width of 1 byte
-			instruction[offset] = byte(operand)
+
 		default:
 			return nil, DeveloperError{
 				Message: "unrecognized operand width.",
@@ -231,37 +240,30 @@ func DiassembleInstruction(instruction []byte) (string, error) {
 
 	def, err := Get(opcode)
 	if err != nil {
-		return "", fmt.Errorf("unrecognised opcode")
+		return "", DeveloperError{
+			Message: fmt.Sprintf("unrecognized opcode: %d", opcode),
+		}
 	}
 
 	var diassembled string
-	switch opcode {
-	case OP_CONSTANT,
-		OP_DEFINE_GLOBAL,
-		OP_SET_GLOBAL,
-		OP_GET_GLOBAL,
-		OP_JUMP,
-		OP_JUMP_IF_FALSE:
-		operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
-		diassembled = fmt.Sprintf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, def.OperandWidths[0])
 
-	case OP_ADD,
-		OP_SUBTRACT,
-		OP_DIVIDE,
-		OP_MULTIPLY,
-		OP_NEGATE,
-		OP_NOT,
-		OP_END,
-		OP_PRINT,
-		OP_EQUALITY,
-		OP_LARGER,
-		OP_LESS,
-		OP_LARGER_EQUAL,
-		OP_LESS_EQUAL,
-		OP_AND,
-		OP_OR,
-		OP_POP,
-		OP_NOT_EQUAL:
+	// Handles opcodes with operands
+	if len(def.OperandWidths) > 0 {
+		for _, width := range def.OperandWidths {
+			switch width {
+			case 2:
+				operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
+				diassembled = fmt.Sprintf("opcode: %s, operand: %d, operand widths: %d bytes", def.Name, operand, width)
+
+			default:
+				return "", DeveloperError{
+					Message: fmt.Sprintf("unrecognised opcode. operand width: %d, opcode: %s", width, def.Name),
+				}
+			}
+
+		}
+
+	} else {
 		diassembled = fmt.Sprintf("opcode: %s, operand: %s, operand widths: %d bytes", def.Name, "None", 0)
 	}
 
