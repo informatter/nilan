@@ -396,7 +396,9 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 		opCode := Opcode(ac.bytecode.Instructions[ip])
 		switch opCode {
 		case OP_ADD, OP_LESS, OP_LARGER, OP_PRINT, OP_SUBTRACT, OP_DIVIDE,
-			OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_END, OP_POP:
+			OP_MULTIPLY, OP_NEGATE, OP_NOT, OP_AND, OP_OR,
+			OP_EQUALITY, OP_NOT_EQUAL, OP_LARGER_EQUAL, OP_LESS_EQUAL,
+			OP_END, OP_POP:
 
 			result, err := DiassembleInstruction([]byte{ac.bytecode.Instructions[ip]})
 			if err != nil {
@@ -411,7 +413,10 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 
 		// Handles all opcodes which store data in the constants pool.
 		// all these opcodes have an operand (index into constants pool) with a width of 2 bytes.
-		case OP_CONSTANT, OP_DEFINE_GLOBAL, OP_SET_GLOBAL, OP_GET_GLOBAL:
+		case OP_CONSTANT,
+			OP_DEFINE_GLOBAL, OP_SET_GLOBAL, OP_GET_GLOBAL,
+			OP_DEFINE_LOCAL, OP_SET_LOCAL, OP_GET_LOCAL:
+
 			offset := ip + OP_CONSTANT_TOTAL_BYTES
 			instruction := ac.bytecode.Instructions[ip:offset]
 			// The operand is the index into the constants pool where the value is stored.
