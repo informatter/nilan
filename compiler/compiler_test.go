@@ -315,61 +315,6 @@ func TestCompileNumericTokens_UnaryExpressions(t *testing.T) {
 	}
 }
 
-func TestDiassembleBytecode(t *testing.T) {
-
-	tests := []struct {
-		statements []ast.Stmt
-		expected   string
-	}{
-		{
-			statements: []ast.Stmt{
-				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left: ast.Binary{
-							Left:     ast.Literal{Value: int64(1)},
-							Operator: token.CreateToken(token.ADD, 0, 0),
-							Right: ast.Binary{
-								Left:     ast.Literal{Value: int64(2)},
-								Operator: token.CreateToken(token.MULT, 0, 0),
-								Right:    ast.Literal{Value: int64(4)},
-							},
-						},
-						Operator: token.CreateToken(token.ADD, 0, 0),
-						Right:    ast.Literal{Value: int64(3)},
-					},
-				},
-			},
-			expected: `opcode: OP_CONSTANT, operand: 0, operand widths: 2 bytes, value: 1
-opcode: OP_CONSTANT, operand: 1, operand widths: 2 bytes, value: 2
-opcode: OP_CONSTANT, operand: 2, operand widths: 2 bytes, value: 4
-opcode: OP_MULTIPLY, operand: None, operand widths: 0 bytes
-opcode: OP_ADD, operand: None, operand widths: 0 bytes
-opcode: OP_CONSTANT, operand: 3, operand widths: 2 bytes, value: 3
-opcode: OP_ADD, operand: None, operand widths: 0 bytes
-opcode: OP_END, operand: None, operand widths: 0 bytes`,
-		},
-	}
-
-	for _, tt := range tests {
-
-		compiler := NewASTCompiler()
-		_, err := compiler.CompileAST(tt.statements)
-		if err != nil {
-			t.Errorf("compilation error occurred: %s", err.Error())
-		}
-
-		result, err := compiler.DiassembleBytecode(false, "")
-		if err != nil {
-			t.Errorf("bytecode diassembly error: %s", err.Error())
-		}
-
-		if strings.TrimSpace(result) != strings.TrimSpace(tt.expected) {
-			t.Errorf("\n\nwant:\n%s\n\ngot:\n%s", tt.expected, result)
-		}
-	}
-
-}
-
 // TestASTCompileArithmetic tests the AST-to-bytecode compiler with arithmetic expressions
 func TestASTCompileArithmetic(t *testing.T) {
 	tests := []struct {
@@ -443,8 +388,37 @@ func TestASTCompilerDisassembleBytecode(t *testing.T) {
 	tests := []struct {
 		name       string
 		statements []ast.Stmt
+		bytecode   *Bytecode
 		expected   string
 	}{
+		{
+			name: "Nested arithmetic",
+			statements: []ast.Stmt{
+				ast.ExpressionStmt{
+					Expression: ast.Binary{
+						Left: ast.Binary{
+							Left:     ast.Literal{Value: int64(1)},
+							Operator: token.CreateToken(token.ADD, 0, 0),
+							Right: ast.Binary{
+								Left:     ast.Literal{Value: int64(2)},
+								Operator: token.CreateToken(token.MULT, 0, 0),
+								Right:    ast.Literal{Value: int64(4)},
+							},
+						},
+						Operator: token.CreateToken(token.ADD, 0, 0),
+						Right:    ast.Literal{Value: int64(3)},
+					},
+				},
+			},
+			expected: `opcode: OP_CONSTANT, operand: 0, operand widths: 2 bytes, value: 1
+opcode: OP_CONSTANT, operand: 1, operand widths: 2 bytes, value: 2
+opcode: OP_CONSTANT, operand: 2, operand widths: 2 bytes, value: 4
+opcode: OP_MULTIPLY, operand: None, operand widths: 0 bytes
+opcode: OP_ADD, operand: None, operand widths: 0 bytes
+opcode: OP_CONSTANT, operand: 3, operand widths: 2 bytes, value: 3
+opcode: OP_ADD, operand: None, operand widths: 0 bytes
+opcode: OP_END, operand: None, operand widths: 0 bytes`,
+		},
 		{
 			name: "Simple Addition",
 			statements: []ast.Stmt{
@@ -511,14 +485,80 @@ opcode: OP_CONSTANT, operand: 2, operand widths: 2 bytes, value: 1
 opcode: OP_SUBTRACT, operand: None, operand widths: 0 bytes
 opcode: OP_END, operand: None, operand widths: 0 bytes`,
 		},
+		{
+			name: "All opcodes - raw without AST compilation",
+			bytecode: &Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0,
+					byte(OP_DEFINE_GLOBAL), 0, 1,
+					byte(OP_SET_GLOBAL), 0, 1,
+					byte(OP_GET_GLOBAL), 0, 1,
+					byte(OP_DEFINE_LOCAL), 0, 2,
+					byte(OP_SET_LOCAL), 0, 2,
+					byte(OP_GET_LOCAL), 0, 2,
+					byte(OP_JUMP), 0, 1,
+					byte(OP_JUMP_IF_FALSE), 0, 2,
+					byte(OP_ADD),
+					byte(OP_SUBTRACT),
+					byte(OP_MULTIPLY),
+					byte(OP_DIVIDE),
+					byte(OP_NEGATE),
+					byte(OP_NOT),
+					byte(OP_PRINT),
+					byte(OP_AND),
+					byte(OP_OR),
+					byte(OP_EQUALITY),
+					byte(OP_NOT_EQUAL),
+					byte(OP_LARGER),
+					byte(OP_LESS),
+					byte(OP_LARGER_EQUAL),
+					byte(OP_LESS_EQUAL),
+					byte(OP_POP),
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(10), int64(20), int64(30)},
+			},
+			expected: `opcode: OP_CONSTANT, operand: 0, operand widths: 2 bytes, value: 10
+opcode: OP_DEFINE_GLOBAL, operand: 1, operand widths: 2 bytes, value: 20
+opcode: OP_SET_GLOBAL, operand: 1, operand widths: 2 bytes, value: 20
+opcode: OP_GET_GLOBAL, operand: 1, operand widths: 2 bytes, value: 20
+opcode: OP_DEFINE_LOCAL, operand: 2, operand widths: 2 bytes, value: 30
+opcode: OP_SET_LOCAL, operand: 2, operand widths: 2 bytes, value: 30
+opcode: OP_GET_LOCAL, operand: 2, operand widths: 2 bytes, value: 30
+opcode: OP_JUMP, operand: 1, operand widths: 2 bytes, byte index in instruction array: 1
+opcode: OP_JUMP_IF_FALSE, operand: 2, operand widths: 2 bytes, byte index in instruction array: 2
+opcode: OP_ADD, operand: None, operand widths: 0 bytes
+opcode: OP_SUBTRACT, operand: None, operand widths: 0 bytes
+opcode: OP_MULTIPLY, operand: None, operand widths: 0 bytes
+opcode: OP_DIVIDE, operand: None, operand widths: 0 bytes
+opcode: OP_NEGATE, operand: None, operand widths: 0 bytes
+opcode: OP_NOT, operand: None, operand widths: 0 bytes
+opcode: OP_PRINT, operand: None, operand widths: 0 bytes
+opcode: OP_AND, operand: None, operand widths: 0 bytes
+opcode: OP_OR, operand: None, operand widths: 0 bytes
+opcode: OP_EQUALITY, operand: None, operand widths: 0 bytes
+opcode: OP_NOT_EQUAL, operand: None, operand widths: 0 bytes
+opcode: OP_LARGER, operand: None, operand widths: 0 bytes
+opcode: OP_LESS, operand: None, operand widths: 0 bytes
+opcode: OP_LARGER_EQUAL, operand: None, operand widths: 0 bytes
+opcode: OP_LESS_EQUAL, operand: None, operand widths: 0 bytes
+opcode: OP_POP, operand: None, operand widths: 0 bytes
+opcode: OP_END, operand: None, operand widths: 0 bytes`,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			compiler := NewASTCompiler()
-			_, err := compiler.CompileAST(tt.statements)
-			if err != nil {
-				t.Errorf("compilation error occurred: %s", err.Error())
+			if tt.statements != nil {
+				_, err := compiler.CompileAST(tt.statements)
+				if err != nil {
+					t.Errorf("compilation error occurred: %s", err.Error())
+				}
+			}
+
+			if tt.bytecode != nil {
+				compiler.bytecode = *tt.bytecode
 			}
 
 			result, err := compiler.DiassembleBytecode(false, "")
