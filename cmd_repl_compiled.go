@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
 	"fmt"
@@ -14,6 +13,7 @@ import (
 	"nilan/token"
 	"nilan/vm"
 
+	"github.com/chzyer/readline"
 	"github.com/google/subcommands"
 )
 
@@ -55,28 +55,34 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 	╚═╝  ╚═══╝╚═╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝    ╚═╝  ╚═╝╚══════╝╚═╝     ╚══════╝
 																			
 `)
-	scanner := bufio.NewScanner(os.Stdin)
+	rl, err := readline.New(">>> ")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "💥 Failed to initialize REPL: %s\n", err.Error())
+		return subcommands.ExitFailure
+	}
+	defer rl.Close()
+
 	astCompiler := compiler.NewASTCompiler()
 	vm := vm.New()
 	var buffer strings.Builder
 
 	for {
+		var prompt string
 		if buffer.Len() == 0 {
-			fmt.Fprintf(os.Stdout, ">>> ")
+			prompt = ">>> "
 		} else {
-			fmt.Fprintf(os.Stdout, "... ")
+			prompt = "... "
 		}
-		scanned := scanner.Scan()
-		if !scanned {
-			err := scanner.Err()
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "💥 %s", err.Error())
-				return subcommands.ExitFailure
-			}
-			return subcommands.ExitSuccess
-		}
+		rl.SetPrompt(prompt)
 
-		line := scanner.Text()
+		line, err := rl.Readline()
+		if err != nil {
+			if err.Error() == "EOF" {
+				return subcommands.ExitSuccess
+			}
+			fmt.Fprintf(os.Stderr, "💥 %s\n", err.Error())
+			return subcommands.ExitFailure
+		}
 		if strings.TrimSpace(line) == "exit" && buffer.Len() == 0 {
 			os.Exit(0)
 		}
