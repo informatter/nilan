@@ -2,12 +2,10 @@ package vm
 
 type Stack []any
 
-// Check if the stack is empty
 func (s *Stack) IsEmpty() bool {
 	return len(*s) == 0
 }
 
-// Push a new value onto the stack
 func (s *Stack) Push(value any) {
 	*s = append(*s, value)
 }
