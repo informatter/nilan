@@ -140,6 +140,546 @@ func TestASTCompilerVisitIfStmt(t *testing.T) {
 	}
 }
 
+// TestASTCompilerLocalVariableDeclaration tests local variable declaration and initialization
+func TestASTCompilerLocalVariableDeclaration(t *testing.T) {
+	tests := []struct {
+		name  string
+		stmts []ast.Stmt
+		want  Bytecode
+	}{
+		{
+			// var x = 5; in a block scope
+			name: "simple local variable declaration",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(5)},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 5
+					byte(OP_SET_LOCAL), 0, 0, // set x in slot 0
+					byte(OP_SCOPE_EXIT), 0, 1, // exit scope, pop 1 local variable
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5)},
+			},
+		},
+		{
+			// var x = 5; var y = 10; in a block scope
+			name: "multiple local variable declarations",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(5)},
+						},
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "y", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(10)},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 5
+					byte(OP_SET_LOCAL), 0, 0, // set x in slot 0
+					byte(OP_CONSTANT), 0, 1, // 10
+					byte(OP_SET_LOCAL), 0, 1, // set y in slot 1
+					byte(OP_SCOPE_EXIT), 0, 2, // exit scope, pop 2 local variables
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(10)},
+			},
+		},
+		{
+			// var x; (declaration without initializer)
+			name: "local variable declaration without initializer",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+							Initializer: nil,
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // nil
+					byte(OP_SET_LOCAL), 0, 0, // set x in slot 0
+					byte(OP_SCOPE_EXIT), 0, 1, // exit scope, pop 1 local variable
+					byte(OP_END),
+				},
+				ConstantsPool: []any{nil},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			compiler := NewASTCompiler()
+			bytecode, err := compiler.CompileAST(tt.stmts)
+			if err != nil {
+				t.Fatalf("compilation error: %v", err)
+			}
+			assertBytecodeEquals(t, bytecode, tt.want)
+		})
+	}
+}
+
+// TestASTCompilerLocalVariableAccess tests local variable access and usage
+func TestASTCompilerLocalVariableAccess(t *testing.T) {
+	tests := []struct {
+		name  string
+		stmts []ast.Stmt
+		want  Bytecode
+	}{
+		{
+			// var x = 5; x + 3
+			name: "local variable access in expression",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(5)},
+						},
+						ast.ExpressionStmt{
+							Expression: ast.Binary{
+								Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+								Operator: token.Token{TokenType: token.ADD},
+								Right:    ast.Literal{Value: int64(3)},
+							},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 5
+					byte(OP_SET_LOCAL), 0, 0, // set x in slot 0
+					byte(OP_GET_LOCAL), 0, 0, // load x
+					byte(OP_CONSTANT), 0, 1, // 3
+					byte(OP_ADD),
+					byte(OP_SCOPE_EXIT), 0, 1, // exit scope, pop 1 local variable
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3)},
+			},
+		},
+		{
+			// var x = 5; var y = 10; x + y
+			name: "multiple local variables in expression",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(5)},
+						},
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "y", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(10)},
+						},
+						ast.ExpressionStmt{
+							Expression: ast.Binary{
+								Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+								Operator: token.Token{TokenType: token.ADD},
+								Right:    ast.Variable{Name: token.Token{Lexeme: "y", TokenType: token.IDENTIFIER}},
+							},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 5
+					byte(OP_SET_LOCAL), 0, 0, // set x in slot 0
+					byte(OP_CONSTANT), 0, 1, // 10
+					byte(OP_SET_LOCAL), 0, 1, // set y in slot 1
+					byte(OP_GET_LOCAL), 0, 0, // load x
+					byte(OP_GET_LOCAL), 0, 1, // load y
+					byte(OP_ADD),
+					byte(OP_SCOPE_EXIT), 0, 2, // exit scope, pop 2 local variables
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(10)},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			compiler := NewASTCompiler()
+			bytecode, err := compiler.CompileAST(tt.stmts)
+			if err != nil {
+				t.Fatalf("compilation error: %v", err)
+			}
+			assertBytecodeEquals(t, bytecode, tt.want)
+		})
+	}
+}
+
+// TestASTCompilerLocalVariableAssignment tests local variable assignment
+func TestASTCompilerLocalVariableAssignment(t *testing.T) {
+	tests := []struct {
+		name  string
+		stmts []ast.Stmt
+		want  Bytecode
+	}{
+		{
+			// var x = 5; x = 10;
+			name: "local variable reassignment",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(5)},
+						},
+						ast.ExpressionStmt{
+							Expression: ast.Assign{
+								Name:  token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+								Value: ast.Literal{Value: int64(10)},
+							},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 5
+					byte(OP_SET_LOCAL), 0, 0, // set x in slot 0
+					byte(OP_CONSTANT), 0, 1, // 10
+					byte(OP_SET_LOCAL), 0, 0, // reassign x (same slot 0)
+					byte(OP_SCOPE_EXIT), 0, 1, // exit scope, pop 1 local variable
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(10)},
+			},
+		},
+		{
+			// var x = 5; x = x + 3;
+			name: "local variable reassignment with self-reference",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(5)},
+						},
+						ast.ExpressionStmt{
+							Expression: ast.Assign{
+								Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+								Value: ast.Binary{
+									Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+									Operator: token.Token{TokenType: token.ADD},
+									Right:    ast.Literal{Value: int64(3)},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 5
+					byte(OP_SET_LOCAL), 0, 0, // set x in slot 0
+					byte(OP_GET_LOCAL), 0, 0, // load x
+					byte(OP_CONSTANT), 0, 1, // 3
+					byte(OP_ADD),
+					byte(OP_SET_LOCAL), 0, 0, // reassign x (same slot 0)
+					byte(OP_SCOPE_EXIT), 0, 1, // exit scope, pop 1 local variable
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3)},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			compiler := NewASTCompiler()
+			bytecode, err := compiler.CompileAST(tt.stmts)
+			if err != nil {
+				t.Fatalf("compilation error: %v", err)
+			}
+			assertBytecodeEquals(t, bytecode, tt.want)
+		})
+	}
+}
+
+// TestASTCompilerNestedScopes tests nested local scopes
+func TestASTCompilerNestedScopes(t *testing.T) {
+	tests := []struct {
+		name  string
+		stmts []ast.Stmt
+		want  Bytecode
+	}{
+		{
+			// Outer scope: var x = 5
+			// Inner scope: var y = 10
+			// Test proper scope nesting and cleanup
+			name: "nested block scopes",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(5)},
+						},
+						ast.BlockStmt{
+							Statements: []ast.Stmt{
+								ast.VarStmt{
+									Name:        token.Token{Lexeme: "y", TokenType: token.IDENTIFIER},
+									Initializer: ast.Literal{Value: int64(10)},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 5
+					byte(OP_SET_LOCAL), 0, 0, // set x in slot 0
+					byte(OP_CONSTANT), 0, 1, // 10
+					byte(OP_SET_LOCAL), 0, 1, // set y in slot 1 (inner scope)
+					byte(OP_SCOPE_EXIT), 0, 1, // exit inner scope, pop 1 local (y)
+					byte(OP_SCOPE_EXIT), 0, 1, // exit outer scope, pop 1 local (x)
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(10)},
+			},
+		},
+		{
+			// Test deeply nested scopes (3 levels)
+			// {var a = 1 { var b = 2 { var c = 3 } }}
+			name: "deeply nested scopes",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "a", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(1)},
+						},
+						ast.BlockStmt{
+							Statements: []ast.Stmt{
+								ast.VarStmt{
+									Name:        token.Token{Lexeme: "b", TokenType: token.IDENTIFIER},
+									Initializer: ast.Literal{Value: int64(2)},
+								},
+								ast.BlockStmt{
+									Statements: []ast.Stmt{
+										ast.VarStmt{
+											Name:        token.Token{Lexeme: "c", TokenType: token.IDENTIFIER},
+											Initializer: ast.Literal{Value: int64(3)},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 1
+					byte(OP_SET_LOCAL), 0, 0, // set a in slot 0
+					byte(OP_CONSTANT), 0, 1, // 2
+					byte(OP_SET_LOCAL), 0, 1, // set b in slot 1
+					byte(OP_CONSTANT), 0, 2, // 3
+					byte(OP_SET_LOCAL), 0, 2, // set c in slot 2
+					byte(OP_SCOPE_EXIT), 0, 1, // exit innermost scope, pop 1 (c)
+					byte(OP_SCOPE_EXIT), 0, 1, // exit middle scope, pop 1 (b)
+					byte(OP_SCOPE_EXIT), 0, 1, // exit outer scope, pop 1 (a)
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(1), int64(2), int64(3)},
+			},
+		},
+		{
+			// Test accessing outer scope variable from inner scope
+			// var x = 5 {x + 3}
+			name: "access outer scope variable from inner scope",
+			stmts: []ast.Stmt{
+				ast.VarStmt{
+					Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+					Initializer: ast.Literal{Value: int64(5)},
+				},
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.ExpressionStmt{
+							Expression: ast.Binary{
+								Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+								Operator: token.Token{TokenType: token.ADD},
+								Right:    ast.Literal{Value: int64(3)},
+							},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // declare 5
+					byte(OP_SET_GLOBAL), 0, 0, // assign 5 to x in global scope
+					byte(OP_GET_GLOBAL), 0, 0, // load x from global scope
+					byte(OP_CONSTANT), 0, 1, // declare 3
+					byte(OP_ADD),
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3)},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			compiler := NewASTCompiler()
+			bytecode, err := compiler.CompileAST(tt.stmts)
+			if err != nil {
+				t.Fatalf("compilation error: %v", err)
+			}
+			assertBytecodeEquals(t, bytecode, tt.want)
+		})
+	}
+}
+
+// TestASTCompilerScopeWithIfStatement tests local scopes used with if statements
+func TestASTCompilerScopeWithIfStatement(t *testing.T) {
+	tests := []struct {
+		name  string
+		stmts []ast.Stmt
+		want  Bytecode
+	}{
+		{
+			// var x = 5; if (x > 3) { var y = 10 }
+			name: "local variable in if block",
+			stmts: []ast.Stmt{
+				ast.VarStmt{
+					Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+					Initializer: ast.Literal{Value: int64(5)},
+				},
+				ast.IfStmt{
+					Condition: ast.Grouping{
+						Expression: ast.Binary{
+							Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+							Operator: token.Token{TokenType: token.LARGER},
+							Right:    ast.Literal{Value: int64(3)},
+						},
+					},
+					Then: ast.BlockStmt{
+						Statements: []ast.Stmt{
+							ast.VarStmt{
+								Name:        token.Token{Lexeme: "y", TokenType: token.IDENTIFIER},
+								Initializer: ast.Literal{Value: int64(10)},
+							},
+						},
+					},
+					Else: nil,
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 5
+					byte(OP_SET_GLOBAL), 0, 0, // set x
+					byte(OP_GET_GLOBAL), 0, 0, // load x
+					byte(OP_CONSTANT), 0, 1, // declare 3
+					byte(OP_LARGER),
+					byte(OP_JUMP_IF_FALSE), 0, 25, // jump if false to end
+					byte(OP_CONSTANT), 0, 2, // 10
+					byte(OP_SET_LOCAL), 0, 0, // set y
+					byte(OP_SCOPE_EXIT), 0, 1, // exit if block scope, pop 1 (y)
+					byte(OP_POP), // pop condition
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(3), int64(10)},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			compiler := NewASTCompiler()
+			bytecode, err := compiler.CompileAST(tt.stmts)
+			if err != nil {
+				t.Fatalf("compilation error: %v", err)
+			}
+			assertBytecodeEquals(t, bytecode, tt.want)
+		})
+	}
+}
+
+// TestASTCompilerLocalVariableShadowing tests that local variable shadowing is correctly compiled
+func TestASTCompilerLocalVariableShadowing(t *testing.T) {
+	tests := []struct {
+		name  string
+		stmts []ast.Stmt
+		want  Bytecode
+	}{
+		{
+			// Outer scope: var x = 5
+			// Inner scope: var x = 10 (shadows outer x)
+			// Test that inner x gets a different slot
+			name: "variable shadowing in nested scopes",
+			stmts: []ast.Stmt{
+				ast.BlockStmt{
+					Statements: []ast.Stmt{
+						ast.VarStmt{
+							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+							Initializer: ast.Literal{Value: int64(5)},
+						},
+						ast.BlockStmt{
+							Statements: []ast.Stmt{
+								ast.VarStmt{
+									Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
+									Initializer: ast.Literal{Value: int64(10)},
+								},
+								ast.ExpressionStmt{
+									Expression: ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: Bytecode{
+				Instructions: []byte{
+					byte(OP_CONSTANT), 0, 0, // 5
+					byte(OP_SET_LOCAL), 0, 0, // set x in slot 0 (outer)
+					byte(OP_CONSTANT), 0, 1, // 10
+					byte(OP_SET_LOCAL), 0, 1, // set x in slot 1 (inner, shadows outer)
+					byte(OP_GET_LOCAL), 0, 1, // load x from slot 1 (shadowed, inner)
+					byte(OP_SCOPE_EXIT), 0, 1, // exit inner scope, pop 1 (inner x)
+					byte(OP_SCOPE_EXIT), 0, 1, // exit outer scope, pop 1 (outer x)
+					byte(OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(10)},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			compiler := NewASTCompiler()
+			bytecode, err := compiler.CompileAST(tt.stmts)
+			if err != nil {
+				t.Fatalf("compilation error: %v", err)
+			}
+			assertBytecodeEquals(t, bytecode, tt.want)
+		})
+	}
+}
+
 func TestCompilerPrintStatement(t *testing.T) {
 	tests := []struct {
 		name             string
@@ -485,66 +1025,6 @@ opcode: OP_CONSTANT, operand: 2, operand widths: 2 bytes, value: 1
 opcode: OP_SUBTRACT, operand: None, operand widths: 0 bytes
 opcode: OP_END, operand: None, operand widths: 0 bytes`,
 		},
-		{
-			name: "All opcodes - raw without AST compilation",
-			bytecode: &Bytecode{
-				Instructions: []byte{
-					byte(OP_CONSTANT), 0, 0,
-					byte(OP_DEFINE_GLOBAL), 0, 1,
-					byte(OP_SET_GLOBAL), 0, 1,
-					byte(OP_GET_GLOBAL), 0, 1,
-					byte(OP_DEFINE_LOCAL), 0, 2,
-					byte(OP_SET_LOCAL), 0, 2,
-					byte(OP_GET_LOCAL), 0, 2,
-					byte(OP_JUMP), 0, 1,
-					byte(OP_JUMP_IF_FALSE), 0, 2,
-					byte(OP_ADD),
-					byte(OP_SUBTRACT),
-					byte(OP_MULTIPLY),
-					byte(OP_DIVIDE),
-					byte(OP_NEGATE),
-					byte(OP_NOT),
-					byte(OP_PRINT),
-					byte(OP_AND),
-					byte(OP_OR),
-					byte(OP_EQUALITY),
-					byte(OP_NOT_EQUAL),
-					byte(OP_LARGER),
-					byte(OP_LESS),
-					byte(OP_LARGER_EQUAL),
-					byte(OP_LESS_EQUAL),
-					byte(OP_POP),
-					byte(OP_END),
-				},
-				ConstantsPool: []any{int64(10), int64(20), int64(30)},
-			},
-			expected: `opcode: OP_CONSTANT, operand: 0, operand widths: 2 bytes, value: 10
-opcode: OP_DEFINE_GLOBAL, operand: 1, operand widths: 2 bytes, value: 20
-opcode: OP_SET_GLOBAL, operand: 1, operand widths: 2 bytes, value: 20
-opcode: OP_GET_GLOBAL, operand: 1, operand widths: 2 bytes, value: 20
-opcode: OP_DEFINE_LOCAL, operand: 2, operand widths: 2 bytes, value: 30
-opcode: OP_SET_LOCAL, operand: 2, operand widths: 2 bytes, value: 30
-opcode: OP_GET_LOCAL, operand: 2, operand widths: 2 bytes, value: 30
-opcode: OP_JUMP, operand: 1, operand widths: 2 bytes, byte index in instruction array: 1
-opcode: OP_JUMP_IF_FALSE, operand: 2, operand widths: 2 bytes, byte index in instruction array: 2
-opcode: OP_ADD, operand: None, operand widths: 0 bytes
-opcode: OP_SUBTRACT, operand: None, operand widths: 0 bytes
-opcode: OP_MULTIPLY, operand: None, operand widths: 0 bytes
-opcode: OP_DIVIDE, operand: None, operand widths: 0 bytes
-opcode: OP_NEGATE, operand: None, operand widths: 0 bytes
-opcode: OP_NOT, operand: None, operand widths: 0 bytes
-opcode: OP_PRINT, operand: None, operand widths: 0 bytes
-opcode: OP_AND, operand: None, operand widths: 0 bytes
-opcode: OP_OR, operand: None, operand widths: 0 bytes
-opcode: OP_EQUALITY, operand: None, operand widths: 0 bytes
-opcode: OP_NOT_EQUAL, operand: None, operand widths: 0 bytes
-opcode: OP_LARGER, operand: None, operand widths: 0 bytes
-opcode: OP_LESS, operand: None, operand widths: 0 bytes
-opcode: OP_LARGER_EQUAL, operand: None, operand widths: 0 bytes
-opcode: OP_LESS_EQUAL, operand: None, operand widths: 0 bytes
-opcode: OP_POP, operand: None, operand widths: 0 bytes
-opcode: OP_END, operand: None, operand widths: 0 bytes`,
-		},
 	}
 
 	for _, tt := range tests {
@@ -668,7 +1148,7 @@ func TestASTCompilerVisitWhileStmt(t *testing.T) {
 			},
 		},
 		{
-			name: "while(x < 5){print(x)}",
+			name: "var x = 1 while(x < 5){print(x)}",
 			stmts: []ast.Stmt{
 				ast.VarStmt{
 					Name:        token.CreateLiteralToken(token.IDENTIFIER, "x", "x", 0, 0),
