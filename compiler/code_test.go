@@ -28,10 +28,8 @@ func TestAssembleInstruction(t *testing.T) {
 		{OP_LESS, []int{}, []byte{byte(OP_LESS)}},
 		{OP_LARGER_EQUAL, []int{}, []byte{byte(OP_LARGER_EQUAL)}},
 		{OP_LESS_EQUAL, []int{}, []byte{byte(OP_LESS_EQUAL)}},
-		{OP_DEFINE_GLOBAL, []int{operand}, []byte{byte(OP_DEFINE_GLOBAL), 253, 232}},
 		{OP_SET_GLOBAL, []int{operand}, []byte{byte(OP_SET_GLOBAL), 253, 232}},
 		{OP_GET_GLOBAL, []int{operand}, []byte{byte(OP_GET_GLOBAL), 253, 232}},
-		{OP_DEFINE_LOCAL, []int{operand}, []byte{byte(OP_DEFINE_LOCAL), 253, 232}},
 		{OP_SET_LOCAL, []int{operand}, []byte{byte(OP_SET_LOCAL), 253, 232}},
 		{OP_GET_LOCAL, []int{operand}, []byte{byte(OP_GET_LOCAL), 253, 232}},
 		{OP_JUMP, []int{operand}, []byte{byte(OP_JUMP), 253, 232}},
@@ -83,15 +81,14 @@ func TestDiassembleInstruction(t *testing.T) {
 		{[]byte{byte(OP_LESS)}, "opcode: OP_LESS, operand: None, operand widths: 0 bytes"},
 		{[]byte{byte(OP_LARGER_EQUAL)}, "opcode: OP_LARGER_EQUAL, operand: None, operand widths: 0 bytes"},
 		{[]byte{byte(OP_LESS_EQUAL)}, "opcode: OP_LESS_EQUAL, operand: None, operand widths: 0 bytes"},
-		{[]byte{byte(OP_DEFINE_GLOBAL), 253, 232}, "opcode: OP_DEFINE_GLOBAL, operand: 65000, operand widths: 2 bytes"},
 		{[]byte{byte(OP_SET_GLOBAL), 253, 232}, "opcode: OP_SET_GLOBAL, operand: 65000, operand widths: 2 bytes"},
 		{[]byte{byte(OP_GET_GLOBAL), 253, 232}, "opcode: OP_GET_GLOBAL, operand: 65000, operand widths: 2 bytes"},
-		{[]byte{byte(OP_DEFINE_LOCAL), 253, 232}, "opcode: OP_DEFINE_LOCAL, operand: 65000, operand widths: 2 bytes"},
 		{[]byte{byte(OP_SET_LOCAL), 253, 232}, "opcode: OP_SET_LOCAL, operand: 65000, operand widths: 2 bytes"},
 		{[]byte{byte(OP_GET_LOCAL), 253, 232}, "opcode: OP_GET_LOCAL, operand: 65000, operand widths: 2 bytes"},
 		{[]byte{byte(OP_JUMP), 253, 232}, "opcode: OP_JUMP, operand: 65000, operand widths: 2 bytes"},
 		{[]byte{byte(OP_JUMP_IF_FALSE), 253, 232}, "opcode: OP_JUMP_IF_FALSE, operand: 65000, operand widths: 2 bytes"},
 		{[]byte{byte(OP_POP)}, "opcode: OP_POP, operand: None, operand widths: 0 bytes"},
+		{[]byte{byte(OP_SCOPE_EXIT), 253, 232}, "opcode: OP_SCOPE_EXIT, operand: 65000, operand widths: 2 bytes"},
 	}
 
 	for _, tt := range tests {
