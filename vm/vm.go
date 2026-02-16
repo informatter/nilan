@@ -186,8 +186,9 @@ func isFalsey(value any) bool {
 // gets executed.
 type VirtualMachine struct {
 
-	// stack stores intermediate values during bytecode execution,
-	// which are poped and pushed as instructions are executed.
+	// stack stores intermediate values during bytecode execution.
+	// they are poped and pushed as instructions are executed. It also stores the local variables by their scope in the program,
+	// which are accessed by their index based on their position in the stack.
 	stack Stack
 	// instruction pointer stores the address of the current bytecode instruction.
 	// It determines where the VM is in the program.
@@ -375,11 +376,16 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 		case compiler.OP_JUMP_IF_FALSE:
 			vm.ip = vm.execJumpIfFalseInstruction(bytecode)
 			continue
-
-		case compiler.OP_DEFINE_GLOBAL, compiler.OP_SET_GLOBAL:
+		case compiler.OP_SET_GLOBAL:
 			instructionLength = vm.execDefineGlobalInstruction(bytecode)
 		case compiler.OP_GET_GLOBAL:
 			instructionLength = vm.execGetGlobalInstruction(bytecode)
+		case compiler.OP_SET_LOCAL:
+			instructionLength = vm.execSetLocalInstruction(bytecode)
+		case compiler.OP_GET_LOCAL:
+			instructionLength = vm.execGetLocalInstruction(bytecode)
+		case compiler.OP_SCOPE_EXIT:
+			instructionLength = vm.execScopeExitInstruction(bytecode)
 		default:
 			// NOTE: This should only happen in development mode.
 			return fmt.Errorf("unknown opcode %v at ip %d", opCode, vm.ip)
@@ -492,12 +498,47 @@ func (vm *VirtualMachine) execLogicalInstruction(opCode compiler.Opcode) (int, e
 
 }
 
+// execSetLocalInstruction sets the value of a local variable slot in the VM's stack.
+// Returns the number of bytes consumed by the instruction.
+func (vm *VirtualMachine) execSetLocalInstruction(bytecode compiler.Bytecode) int {
+	slot := vm.getOperand(bytecode)
+
+	// Ensure stack has capacity
+	for len(vm.stack) <= int(slot) {
+		vm.stack = append(vm.stack, nil)
+	}
+
+	// Get value from stack and assign it to the local variable slot.
+	// NOTE: The value is not popped from the stack, as it may be used in subsequent instructions.
+	vm.stack[slot] = vm.stack.Peek()
+	return compiler.OP_CONSTANT_TOTAL_BYTES
+}
+
+// execGetLocalInstruction retrieves a local variable from the stack at the position
+// specified by the operand in the bytecode, and pushes its value onto the top
+// of the stack. It returns the number of bytes consumed by the instruction.
+func (vm *VirtualMachine) execGetLocalInstruction(bytecode compiler.Bytecode) int {
+	slot := vm.getOperand(bytecode)
+	// NOTE: The value is pushed to the top of the stack so it can be used by subsequent operations.
+	vm.stack.Push(vm.stack[slot])
+	return compiler.OP_CONSTANT_TOTAL_BYTES
+}
+
+// execScopeExitInstruction handles the execution of the scope exit instruction in the VM.
+// It pops a specified number of local variables from the stack, as determined by the operand in the provided bytecode.
+// It returns the number of bytes consumed by the instruction.
+func (vm *VirtualMachine) execScopeExitInstruction(bytecode compiler.Bytecode) int {
+	totalLocalsToPop := vm.getOperand(bytecode)
+	for i := 0; i < int(totalLocalsToPop); i++ {
+		vm.stack.Pop()
+	}
+	return compiler.OP_CONSTANT_TOTAL_BYTES
+}
+
 // execDefineGlobalInstruction defines a global variable, and assigns the corresponding
 // value from the top of the stack to it.
 func (vm *VirtualMachine) execDefineGlobalInstruction(bytecode compiler.Bytecode) int {
-	index := vm.ip + compiler.OPCODE_TOTAL_BYTES
-	instruction := bytecode.Instructions[index : vm.ip+compiler.OP_CONSTANT_TOTAL_BYTES]
-	operand := binary.BigEndian.Uint16(instruction)
+	operand := vm.getOperand(bytecode)
 	name := bytecode.NameConstants[operand]
 
 	vm.globalVars[name] = vm.stack.Pop()
@@ -506,9 +547,7 @@ func (vm *VirtualMachine) execDefineGlobalInstruction(bytecode compiler.Bytecode
 
 // execSetGlobalInstruction sets the value of an existing global variable
 func (vm *VirtualMachine) execGetGlobalInstruction(bytecode compiler.Bytecode) int {
-	index := vm.ip + compiler.OPCODE_TOTAL_BYTES
-	instruction := bytecode.Instructions[index : vm.ip+compiler.OP_CONSTANT_TOTAL_BYTES]
-	operand := binary.BigEndian.Uint16(instruction)
+	operand := vm.getOperand(bytecode)
 	name := bytecode.NameConstants[operand]
 	vm.stack.Push(vm.globalVars[name])
 	return compiler.OP_CONSTANT_TOTAL_BYTES
@@ -567,9 +606,7 @@ func (vm *VirtualMachine) execUnaryInstruction(opCode compiler.Opcode) (int, err
 //   - int: The total number of bytes consumed by this instruction, used to
 //     increment the VM's instruction pointer.
 func (vm *VirtualMachine) execConstantInstruction(bytecode compiler.Bytecode) int {
-	index := vm.ip + compiler.OPCODE_TOTAL_BYTES
-	instruction := bytecode.Instructions[index : vm.ip+compiler.OP_CONSTANT_TOTAL_BYTES]
-	operand := binary.BigEndian.Uint16(instruction)
+	operand := vm.getOperand(bytecode)
 	value := bytecode.ConstantsPool[operand]
 	vm.stack.Push(value)
 	return compiler.OP_CONSTANT_TOTAL_BYTES
@@ -651,4 +688,12 @@ func (vm *VirtualMachine) execArithmeticInstruction(operationFloat arithmeticFun
 	}
 
 	return compiler.OPCODE_TOTAL_BYTES, nil
+}
+
+// getOperand extracts a 16-bit operand from the bytecode instructions at the current instruction pointer (ip).
+// It reads the operand by skipping the opcode and returns it as a uint16 value using big-endian encoding.
+func (vm *VirtualMachine) getOperand(bytecode compiler.Bytecode) uint16 {
+	operandIndex := vm.ip + compiler.OPCODE_TOTAL_BYTES
+	instruction := bytecode.Instructions[operandIndex : vm.ip+compiler.OP_CONSTANT_TOTAL_BYTES]
+	return binary.BigEndian.Uint16(instruction)
 }
