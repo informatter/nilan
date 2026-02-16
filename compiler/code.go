@@ -83,6 +83,11 @@ const (
 
 	// OP_POP is used to pop a value from the VM's stack.
 	OP_POP Opcode = iota
+
+	// OP_SCOPE_EXIT is used to pop all local variables from the current scope when exiting a block.
+	// This opcode is emitted at the end of a block statement, and its operand is the number of
+	// local variables to pop.
+	OP_SCOPE_EXIT Opcode = iota
 )
 
 // Represents a definition of an opcode.
@@ -140,15 +145,17 @@ var definitions = map[Opcode]*OpCodeDefinition{
 
 	// All opcodes for global variables have a single operand which takes two bytes of memory.
 	// The operand will be the name index
-	OP_DEFINE_GLOBAL: {Name: "OP_DEFINE_GLOBAL", OperandWidths: []int{2}},
-	OP_GET_GLOBAL:    {Name: "OP_GET_GLOBAL", OperandWidths: []int{2}},
-	OP_SET_GLOBAL:    {Name: "OP_SET_GLOBAL", OperandWidths: []int{2}},
+	OP_GET_GLOBAL: {Name: "OP_GET_GLOBAL", OperandWidths: []int{2}},
+	OP_SET_GLOBAL: {Name: "OP_SET_GLOBAL", OperandWidths: []int{2}},
 
 	// All opcodes for global variables have a single operand which takes two bytes of memory.
 	// The operand will be the name index
-	OP_DEFINE_LOCAL: {Name: "OP_DEFINE_LOCAL", OperandWidths: []int{2}},
-	OP_GET_LOCAL:    {Name: "OP_GET_LOCAL", OperandWidths: []int{2}},
-	OP_SET_LOCAL:    {Name: "OP_SET_LOCAL", OperandWidths: []int{2}},
+	OP_GET_LOCAL: {Name: "OP_GET_LOCAL", OperandWidths: []int{2}},
+	OP_SET_LOCAL: {Name: "OP_SET_LOCAL", OperandWidths: []int{2}},
+
+	// The OP_SCOPE_EXIT opcode has a single operand which takes two bytes of memory.
+	// The operand represents the number of local variables to pop from the stack when exiting a scope.
+	OP_SCOPE_EXIT: {Name: "OP_SCOPE_EXIT", OperandWidths: []int{2}},
 }
 
 func Get(op Opcode) (*OpCodeDefinition, error) {
