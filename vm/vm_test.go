@@ -237,10 +237,10 @@ func TestExecuteBytecodeLogicalOpWithVariables(t *testing.T) {
 				Instructions: []byte{
 					// Define a = true
 					byte(compiler.OP_CONSTANT), 0, 0,
-					byte(compiler.OP_DEFINE_GLOBAL), 0, 0,
+					byte(compiler.OP_SET_GLOBAL), 0, 0,
 					// Define b = false
 					byte(compiler.OP_CONSTANT), 0, 1,
-					byte(compiler.OP_DEFINE_GLOBAL), 0, 1,
+					byte(compiler.OP_SET_GLOBAL), 0, 1,
 					// Get a
 					byte(compiler.OP_GET_GLOBAL), 0, 0,
 					// Get b
@@ -261,6 +261,183 @@ func TestExecuteBytecodeLogicalOpWithVariables(t *testing.T) {
 			expectedStack: []any{false, true}, // a && b, a || b
 		},
 	}
+	assertResults(tests, t)
+}
+
+// Tests that reassigning a local variable uses the same slot and does not create a new one
+func TestVMLocalVariablesReassignmentUsesSameSlot(t *testing.T) {
+	tests := []struct {
+		bytecode      compiler.Bytecode
+		expectedStack any
+	}{
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_SET_LOCAL), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_SET_LOCAL), 0, 0,
+					byte(compiler.OP_GET_LOCAL), 0, 0,
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(1), int64(2)},
+			},
+			expectedStack: []any{int64(2), int64(2), int64(2)},
+		},
+	}
+
+	assertResults(tests, t)
+}
+
+// Tests that OP_SCOPE_EXIT correctly pops the specified number of local variables from the
+// stack when exiting a scope
+func TestVMLocalVariablesScopeExitPopsLocals(t *testing.T) {
+	tests := []struct {
+		bytecode      compiler.Bytecode
+		expectedStack any
+	}{
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_SET_LOCAL), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_SET_LOCAL), 0, 1,
+					byte(compiler.OP_SCOPE_EXIT), 0, 2,
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(10)},
+			},
+			expectedStack: []any{},
+		},
+		{
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_SET_LOCAL), 0, 0,
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_SET_LOCAL), 0, 1,
+					byte(compiler.OP_SCOPE_EXIT), 0, 1,
+					byte(compiler.OP_GET_LOCAL), 0, 0,
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(5), int64(10)},
+			},
+			expectedStack: []any{int64(5), int64(5)},
+		},
+	}
+
+	assertResults(tests, t)
+}
+
+// Tests that local variables can be used in arithmetic operations and that the correct values
+// are computed
+func TestVMLocalVariablesArithmeticInNestedScopes(t *testing.T) {
+	tests := []struct {
+		bytecode      compiler.Bytecode
+		expectedStack any
+	}{
+		{
+			// {
+			//   var x = 2
+			//   {
+			//     var y = 3
+			//     x + y
+			//   }
+			// }
+			// Outer scope local: slot 0
+			// Inner scope local: slot 1
+			// Compute x + y inside inner scope, pop expression result,
+			// then exit both scopes.
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_SET_LOCAL), 0, 0,
+
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_SET_LOCAL), 0, 1,
+
+					byte(compiler.OP_GET_LOCAL), 0, 0,
+					byte(compiler.OP_GET_LOCAL), 0, 1,
+					byte(compiler.OP_ADD),
+					byte(compiler.OP_POP),
+
+					byte(compiler.OP_SCOPE_EXIT), 0, 1,
+					byte(compiler.OP_SCOPE_EXIT), 0, 1,
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(2), int64(3)},
+			},
+			expectedStack: []any{},
+		},
+		{
+			// {
+			//   var x = 4
+			//   {
+			//     var y = 6
+			//     x = x * y
+			//   }
+			//
+			// }
+			// Compute x * y in inner scope and assign result back into
+			// outer scope slot 0, then exit inner scope and verify outer value.
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_SET_LOCAL), 0, 0,
+
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_SET_LOCAL), 0, 1,
+
+					byte(compiler.OP_GET_LOCAL), 0, 0,
+					byte(compiler.OP_GET_LOCAL), 0, 1,
+					byte(compiler.OP_MULTIPLY),
+					byte(compiler.OP_SET_LOCAL), 0, 0,
+					byte(compiler.OP_POP),
+
+					byte(compiler.OP_SCOPE_EXIT), 0, 1,
+					byte(compiler.OP_GET_LOCAL), 0, 0,
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(4), int64(6)},
+			},
+			expectedStack: []any{int64(24), int64(24)},
+		},
+		{
+			// {
+			//   var x = 9
+			//   {
+			//     var y = 2
+			//     x = x / y
+			//   }
+			//
+			// }
+			// Same as above using division to verify mixed arithmetic handling
+			// in nested scope flow.
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_SET_LOCAL), 0, 0,
+
+					byte(compiler.OP_CONSTANT), 0, 1,
+					byte(compiler.OP_SET_LOCAL), 0, 1,
+
+					byte(compiler.OP_GET_LOCAL), 0, 0,
+					byte(compiler.OP_GET_LOCAL), 0, 1,
+					byte(compiler.OP_DIVIDE),
+					byte(compiler.OP_SET_LOCAL), 0, 0,
+					byte(compiler.OP_POP),
+
+					byte(compiler.OP_SCOPE_EXIT), 0, 1,
+					byte(compiler.OP_GET_LOCAL), 0, 0,
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{int64(9), int64(2)},
+			},
+			expectedStack: []any{float64(4.5), float64(4.5)},
+		},
+	}
+
 	assertResults(tests, t)
 }
 
