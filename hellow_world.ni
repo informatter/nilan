@@ -1,8 +1,4 @@
-var a = "hellow world!"
-print a
-
-
-var n = 20
+var n = 50
 var a = 0
 var b = 1
 var count = 0
@@ -14,5 +10,5 @@ while count < n{
     count = count + 1
 }
 
-print "20th fibonacci number:"
+print "50th fibonacci number:"
 print a
