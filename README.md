@@ -26,17 +26,23 @@ Source Code → Lexer → Tokens → Parser → AST → ASTCompiler → Bytecode
 
 ✅ Boolean logical expressions: `and`, `or`
 
+✅ Control flow: `if`, `else`
+
 ✅ Unary negation: `-10`, `!false`
 
-✅ Assignment statements: `var a = 2` (global variables for now) 
+✅ Assignment statements: `var a = 2` 
 
 ✅ Literal values: integers, floats, boleans, strings
+
+✅ Lexical scope
+
+✅ Block scope: `{}`
 
 ✅ Grouped expressions: `(a + b) * c`
 
 ✅ REPL (Read-Eval-Print Loop) for interactive testing
 
-✅ Execute source code from a file (via `emit` command)
+✅ Execute source code from a file (via `run` command)
 
 ### Tree-Walk Interpreter (Deprecated) ⚠️
 
@@ -45,6 +51,8 @@ The following features were implemented in the tree-walk interpreter but are **n
 ✅ Lexical scope
 
 ✅ Block scope: `{}`
+
+✅ Global variables
 
 ✅ Comparison operators: `>`, `>=`, `<`, `<=`, `==`, `!=`
 
@@ -66,17 +74,20 @@ The following features were implemented in the tree-walk interpreter but are **n
 
 ✅ Unary operations: logical not `!`
 
+✅ While loop
+
+
 ## Limitations
 
 ### ASTCompiler + VM (Current) 🔴
 
 The following features are **not yet supported** in the compiled version:
 
-🔴 Lexical and block scope
-
 🔴 string operations
 
-🔴 Control flow: `if`, `else`, `while` loops
+🔴 Control flow: `break`, `continue`
+
+🔴 For loop
 
 🔴 Functions and function calls
 
@@ -107,8 +118,6 @@ The following are **not supported** in the tree-walk interpreter (and are not pl
 🔴 Complex features such as Module/package imports, etc ...
 
 
-
-
 ## Current Syntactic Grammar (ISO EBNF)
 
 Nilan’s syntactic grammar is defined using **ISO Extended Backus–Naur Form (ISO EBNF)**, conforming to [ISO/IEC 14977](https://www.iso.org/standard/26153.html). It represents the rules used to parse a sequence of tokens into an Abstract Syntax Tree (AST)
@@ -118,50 +127,49 @@ program = { declaration }, EOF ;
 
 declaration = variable-declaration | statement ;
 
-variable-declaration = identifier , "=" , expression ;
+variable-declaration = IDENTIFIER , [ "=" , expression ] ;
 
 statement = expression
-          | if-statement
-          | print-statement
-          | while-statement
-          | block-statement ;
+        | if-statement
+        | print-statement
+        | while-statement
+        | block-statement ;
 
 if-statement = "if" , expression , statement , [ "else" , statement ] ;
 
 print-statement = "print" , expression ;
 
-while-statement = "while", expression, statement ;
+while-statement = "while" , expression , statement ;
 
-block-statement  = "{" , { declaration } , "}" ;
+block-statement = "{" , { declaration } , "}" ;
 
 expression = assignment-expression ;
 
-assignment-expression = IDENTIFIER, "=", assignment-expression
-           | or-expression ;
+assignment-expression = IDENTIFIER , "=" , assignment-expression
+               | or-expression ;
 
-or-expression  = and-expression , { "or" , and-expression } ;
+or-expression = and-expression , { "or" , and-expression } ;
 
-and-expression = equality-expression, { "and", equality-expression } ;
+and-expression = equality-expression , { "and" , equality-expression } ;
 
-equality-expression = comparison-expression, { ("!=", "=="), comparison-expression } ;
+equality-expression = comparison-expression , { ( "!=" | "==" ) , comparison-expression } ;
 
-comparison-expression = term-expression, { (">" | ">=" | "<" | "<="), term-expression } ;
+comparison-expression = term-expression , { ( ">" | ">=" | "<" | "<=" ) , term-expression } ;
 
-term-expression = factor-expression, { ("+" | "-"), factor-expression } ;
+term-expression = factor-expression , { ( "+" | "-" ) , factor-expression } ;
 
-factor-expression = unary-expression, { ("*" | "/"), unary-expression } ;
+factor-expression = unary-expression , { ( "*" | "/" ) , unary-expression } ;
 
-unary-expression = ("!" | "-"), unary-expression
-      | primary-expression ;
+unary-expression = ( "!" | "-" ) , unary-expression
+            | primary-expression ;
 
-primary-expression = FLOAT 
-        | INT 
-        | IDENTIFIER 
-        | "true" 
-        | "false" 
-        | "null" 
-        | "(", expression, ")" ;
-
+primary-expression = FLOAT
+            | INT
+            | IDENTIFIER
+            | "true"
+            | "false"
+            | "null"
+            | "(" , expression , ")" ;
 ```
 
 This grammar is not left-recursive because none of the non-terminals start their production with themselves on the left side. Each rule begins with a different non-terminal or terminal before any recursion happens. For example, `equality` starts with `comparison`,`comparison` starts with `term`, etc...
