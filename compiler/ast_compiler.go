@@ -399,7 +399,6 @@ func (ac *ASTCompiler) VisitVarStmt(varStmt ast.VarStmt) any {
 			ac.addConstant(nil)
 		}
 		slot := ac.locals[len(ac.locals)-1].slot
-		//ac.emit(OP_DEFINE_LOCAL, int(slot))
 		ac.emit(OP_SET_LOCAL, int(slot))
 		ac.locals[len(ac.locals)-1].initialized = varStmt.Initializer != nil
 	}
@@ -407,16 +406,38 @@ func (ac *ASTCompiler) VisitVarStmt(varStmt ast.VarStmt) any {
 	return nil
 }
 
-// VisitLogicalExpression compilers logical expressions (and, or)
+// VisitLogicalExpression compiles logical expressions (and, or) by emitting bytecode that implements short-circuiting behaviour.
 func (ac *ASTCompiler) VisitLogicalExpression(logical ast.Logical) any {
 
+	// left expression is compiled first to ensure correct evaluation order and short-circuiting behaviour.
 	logical.Left.Accept(ac)
-	logical.Right.Accept(ac)
+
 	switch logical.Operator.TokenType {
 	case token.OR:
-		ac.emit(OP_OR)
+		// For an "or" expression, if the left operand is truthy, we want to short-circuit and skip
+		// evaluating the right operand.
+
+		jumpIfFalsePos := ac.emitPlaceholderJump(OP_JUMP_IF_FALSE)
+		jumpEndPos := ac.emitPlaceholderJump(OP_JUMP)
+
+		rightStart := len(ac.bytecode.Instructions)
+		ac.patchJump(jumpIfFalsePos, rightStart)
+
+		ac.emit(OP_POP)
+
+		// The right expression is compiled after emitting the jump instruction. If the left operand is truthy,
+		// the VM will jump over the right expression. This is achieved by the below patchJump call.
+		logical.Right.Accept(ac)
+
+		ac.patchJump(jumpEndPos, len(ac.bytecode.Instructions))
 	case token.AND:
-		ac.emit(OP_AND)
+		// For an "and" expression, if the left operand is falsy, we want to short-circuit and skip evaluating the right operand.
+		jumpIfFalsePos := ac.emitPlaceholderJump(OP_JUMP_IF_FALSE)
+
+		ac.emit(OP_POP)
+		logical.Right.Accept(ac)
+
+		ac.patchJump(jumpIfFalsePos, len(ac.bytecode.Instructions))
 	}
 	return nil
 }
@@ -464,17 +485,15 @@ func (ac *ASTCompiler) VisitIfStmt(ifStmt ast.IfStmt) any {
 	// compile the condition expression first
 	ifStmt.Condition.Accept(ac)
 
-	jumpIfFalsePatch := len(ac.bytecode.Instructions)
+	jumpIfFalsePatch := ac.emitPlaceholderJump(OP_JUMP_IF_FALSE)
 	// For example, the intructions would now be something like: [..., OP_JUMP_IF_FALSE,  0x00, 0x00]
 	// where `0x00, 0x0` are the placeholder operand bytes.
-	ac.emit(OP_JUMP_IF_FALSE, 0)
 
 	ifStmt.Then.Accept(ac)
 
 	if ifStmt.Else != nil {
 		// If there is an "else" branch, emit a jump instruction to skip over it after executing the "then" branch.
-		jumpPatch := len(ac.bytecode.Instructions)
-		ac.emit(OP_JUMP, 0)
+		jumpPatch := ac.emitPlaceholderJump(OP_JUMP)
 
 		// Patch the operand of the OP_JUMP_IF_FALSE instruction defined at the beginning.
 		// This allows the VM to correctly jump to the start of the "else" branch, if the "then"
@@ -506,8 +525,7 @@ func (ac *ASTCompiler) VisitWhileStmt(whileStmt ast.WhileStmt) any {
 	// compile the condition expression first
 	whileStmt.Condition.Accept(ac)
 
-	jumpIfFalsePatch := len(ac.bytecode.Instructions)
-	ac.emit(OP_JUMP_IF_FALSE, 0) // placeholder operand to be patched later
+	jumpIfFalsePatch := ac.emitPlaceholderJump(OP_JUMP_IF_FALSE)
 
 	// compile the loop body
 	whileStmt.Body.Accept(ac)
@@ -587,6 +605,16 @@ func (ac *ASTCompiler) emit(opcode Opcode, operands ...int) {
 		panic(err.Error())
 	}
 	ac.bytecode.Instructions = append(ac.bytecode.Instructions, instruction...)
+}
+
+// emitPlaceholderJump emits a jump instruction with the specified opcode and a placeholder operand (0).
+// It returns the position in the bytecode where the jump instruction was emitted,
+// which can later be passed to `patchJump` to update the operand with
+// the correct jump target.
+func (ac *ASTCompiler) emitPlaceholderJump(opcode Opcode) int {
+	position := len(ac.bytecode.Instructions)
+	ac.emit(opcode, 0)
+	return position
 }
 
 // beginScope increments the scope depth, when compiling a block statement.
