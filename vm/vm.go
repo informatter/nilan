@@ -361,13 +361,6 @@ func (vm *VirtualMachine) Run(bytecode compiler.Bytecode) error {
 			}
 			instructionLength = l
 
-		case compiler.OP_AND, compiler.OP_OR:
-			l, err := vm.execLogicalInstruction(opCode)
-			if err != nil {
-				return err
-			}
-			instructionLength = l
-
 		// NOTE: `continue` is needed as the VM needs to jump to a target instruction
 		// instead of incrementing the instruction pointer to the next instruction in sequence.
 		case compiler.OP_JUMP:
