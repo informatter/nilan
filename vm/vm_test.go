@@ -145,11 +145,13 @@ func TestExecuteBytecodeLogicalOpVMStack(t *testing.T) {
 	}{
 
 		{
+			// tests the `and` operator when both operands are true, it should evaluate the second operand and return true.
 			bytecode: compiler.Bytecode{
 				Instructions: []byte{
 					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_JUMP_IF_FALSE), 0, 0,
+					byte(compiler.OP_POP),
 					byte(compiler.OP_CONSTANT), 0, 1,
-					byte(compiler.OP_AND),
 					byte(compiler.OP_END),
 				},
 				ConstantsPool: []any{true, true},
@@ -157,12 +159,14 @@ func TestExecuteBytecodeLogicalOpVMStack(t *testing.T) {
 			expectedStack: []any{true},
 		},
 
-		{
+		{ // tests the `and` operator short-circuiting by jumping over the second operand if the first
+			// operand is false
 			bytecode: compiler.Bytecode{
 				Instructions: []byte{
 					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_JUMP_IF_FALSE), 0, 10,
+					byte(compiler.OP_POP),
 					byte(compiler.OP_CONSTANT), 0, 1,
-					byte(compiler.OP_AND),
 					byte(compiler.OP_END),
 				},
 				ConstantsPool: []any{true, false},
@@ -171,11 +175,30 @@ func TestExecuteBytecodeLogicalOpVMStack(t *testing.T) {
 		},
 
 		{
+			// tests the `and` operator when the first operand is false and the second operand is also false,
+			// it should short-circuit and return false without evaluating the second operand.
 			bytecode: compiler.Bytecode{
 				Instructions: []byte{
 					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_JUMP_IF_FALSE), 0, 10,
+					byte(compiler.OP_POP),
 					byte(compiler.OP_CONSTANT), 0, 1,
-					byte(compiler.OP_OR),
+					byte(compiler.OP_END),
+				},
+				ConstantsPool: []any{false, false},
+			},
+			expectedStack: []any{false},
+		},
+
+		{
+			// tests the `or operator short-circuiting by jumping over the second operand if the first operand is true
+			bytecode: compiler.Bytecode{
+				Instructions: []byte{
+					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_JUMP_IF_FALSE), 0, 9,
+					byte(compiler.OP_JUMP), 0, 13,
+					byte(compiler.OP_POP),
+					byte(compiler.OP_CONSTANT), 0, 1,
 					byte(compiler.OP_END),
 				},
 				ConstantsPool: []any{true, false},
@@ -184,11 +207,14 @@ func TestExecuteBytecodeLogicalOpVMStack(t *testing.T) {
 		},
 
 		{
+			// tests the `or` operator when both operands are false, it should evaluate the second operand and return false.
 			bytecode: compiler.Bytecode{
 				Instructions: []byte{
 					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_JUMP_IF_FALSE), 0, 13,
+					byte(compiler.OP_JUMP), 0, 10,
+					byte(compiler.OP_POP),
 					byte(compiler.OP_CONSTANT), 0, 1,
-					byte(compiler.OP_OR),
 					byte(compiler.OP_END),
 				},
 				ConstantsPool: []any{false, false},
@@ -197,68 +223,20 @@ func TestExecuteBytecodeLogicalOpVMStack(t *testing.T) {
 		},
 
 		{
+			// tests the `or` operator when the first operand is false and the second operand is true,
+			// it should evaluate the second operand and return true.
 			bytecode: compiler.Bytecode{
 				Instructions: []byte{
 					byte(compiler.OP_CONSTANT), 0, 0,
+					byte(compiler.OP_JUMP_IF_FALSE), 0, 9,
+					byte(compiler.OP_JUMP), 0, 13,
+					byte(compiler.OP_POP),
 					byte(compiler.OP_CONSTANT), 0, 1,
-					byte(compiler.OP_AND),
-					byte(compiler.OP_END),
-				},
-				ConstantsPool: []any{false, false},
-			},
-			expectedStack: []any{false},
-		},
-
-		{
-			bytecode: compiler.Bytecode{
-				Instructions: []byte{
-					byte(compiler.OP_CONSTANT), 0, 0,
-					byte(compiler.OP_CONSTANT), 0, 1,
-					byte(compiler.OP_OR),
 					byte(compiler.OP_END),
 				},
 				ConstantsPool: []any{false, true},
 			},
 			expectedStack: []any{true},
-		},
-	}
-	assertResults(tests, t)
-}
-
-// Tests logical expressions with variables in the bytecode
-func TestExecuteBytecodeLogicalOpWithVariables(t *testing.T) {
-	tests := []struct {
-		bytecode      compiler.Bytecode
-		expectedStack any
-	}{
-		// Define global var a = true, b = false, then a && b, a || b
-		{
-			bytecode: compiler.Bytecode{
-				Instructions: []byte{
-					// Define a = true
-					byte(compiler.OP_CONSTANT), 0, 0,
-					byte(compiler.OP_SET_GLOBAL), 0, 0,
-					// Define b = false
-					byte(compiler.OP_CONSTANT), 0, 1,
-					byte(compiler.OP_SET_GLOBAL), 0, 1,
-					// Get a
-					byte(compiler.OP_GET_GLOBAL), 0, 0,
-					// Get b
-					byte(compiler.OP_GET_GLOBAL), 0, 1,
-					// AND
-					byte(compiler.OP_AND),
-					// Get a
-					byte(compiler.OP_GET_GLOBAL), 0, 0,
-					// Get b
-					byte(compiler.OP_GET_GLOBAL), 0, 1,
-					// OR
-					byte(compiler.OP_OR),
-					byte(compiler.OP_END),
-				},
-				ConstantsPool: []any{true, false},
-				NameConstants: []string{"a", "b"},
-			},
-			expectedStack: []any{false, true}, // a && b, a || b
 		},
 	}
 	assertResults(tests, t)
