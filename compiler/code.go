@@ -26,13 +26,20 @@ type Instructions []byte
 // All opcodes take up 1 byte of memory
 const OPCODE_TOTAL_BYTES int = 1
 
+// Some instructions have a total of 3 bytes of memory, 1 byte for the opcode and 2 bytes for the operand
+// For example, the OP_CONSTANT instruction has a total of 3 bytes of memory, 1 byte for the opcode and 2 bytes for the operand
+// which represents the index of the constant in the constants pool
+const THREE_BYTE_INSTRUCTION_LENGTH int = 3
+
 // constant opcode takes up 3 bytes of memory,
 // 1 byte for the opcode and 2 bytes for the operand which represents the index of the constant
 // in the constants pool
+// NOTE: This constant is deprecated in favor of the more general ThreeByteInstructionLength constant, which can be used for any instruction that takes up 3 bytes of memory, not just jump opcodes.
 const OP_CONSTANT_TOTAL_BYTES = 3
 
 // any jump upcode takes a total of 3 bytes of memory,
 // 1 byte for the opcode and 2 bytes for the operand which represents the jump offset
+// NOTE: This constant is deprecated in favor of the more general ThreeByteInstructionLength constant, which can be used for any instruction that takes up 3 bytes of memory, not just jump opcodes.
 const OP_JUMP_TOTAL_BYTES = 3
 
 // opcodes
