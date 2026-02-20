@@ -111,69 +111,39 @@ func (ac *ASTCompiler) DiassembleBytecode(saveToDisk bool, filePath string) (str
 			instructionLength = OPCODE_TOTAL_BYTES
 
 		case OP_GET_LOCAL, OP_SET_LOCAL:
-			offset := ip + OP_CONSTANT_TOTAL_BYTES
-			instruction := ac.bytecode.Instructions[ip:offset]
-
 			// The  operand is the index where the local variable is stored in the VM's stack.
-			operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
-			diassembledInstr, err := DiassembleInstruction(instruction)
-			if err != nil {
-				panic(err.Error())
-			}
-			result := diassembledInstr + fmt.Sprintf(", vm stack index: %d", operand)
+			operand, dia := ac.diassemble3ByteInstruction(ip)
+			result := dia + fmt.Sprintf(", vm stack index: %d", operand)
 			builder.WriteString(result)
 			builder.WriteString("\n")
-			instructionLength = OP_CONSTANT_TOTAL_BYTES
+			instructionLength = THREE_BYTE_INSTRUCTION_LENGTH
 
 		case OP_SCOPE_EXIT:
-			offset := ip + OP_CONSTANT_TOTAL_BYTES
-			instruction := ac.bytecode.Instructions[ip:offset]
-
-			// The operand is the number of local variables that go out of scope, which tells the VM how many variables to pop from the stack.
-			operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
-			diassembledInstr, err := DiassembleInstruction(instruction)
-			if err != nil {
-				panic(err.Error())
-			}
-			result := diassembledInstr + fmt.Sprintf(", total local variables to pop from the VM's stack: %d", operand)
+			operand, dia := ac.diassemble3ByteInstruction(ip)
+			result := dia + fmt.Sprintf(", total local variables to pop from the VM's stack: %d", operand)
 			builder.WriteString(result)
 			builder.WriteString("\n")
-			instructionLength = OP_CONSTANT_TOTAL_BYTES
+			instructionLength = THREE_BYTE_INSTRUCTION_LENGTH
 
 		// Handles all opcodes which store data in the constants pool.
 		// all these opcodes have an operand (index into constants pool) with a width of 2 bytes.
-		case OP_CONSTANT,
-			OP_SET_GLOBAL, OP_GET_GLOBAL:
+		case OP_CONSTANT, OP_SET_GLOBAL, OP_GET_GLOBAL:
 
-			offset := ip + OP_CONSTANT_TOTAL_BYTES
-			instruction := ac.bytecode.Instructions[ip:offset]
-			// The operand is the index into the constants pool where the value is stored.
-			// We need to retrieve the value from the constants pool to provide a more informative disassembly.
-			// The opcode byte is ignored.
-			operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
+			// The operand is the index into the constants pool where the actual value is stored.
+			operand, dia := ac.diassemble3ByteInstruction(ip)
 			value := ac.bytecode.ConstantsPool[operand]
-
-			diassembledInstr, err := DiassembleInstruction(instruction)
-			if err != nil {
-				panic(err.Error())
-			}
-			result := diassembledInstr + fmt.Sprintf(", value: %d", value)
+			result := dia + fmt.Sprintf(", value: %d", value)
 			builder.WriteString(result)
 			builder.WriteString("\n")
-			instructionLength = OP_CONSTANT_TOTAL_BYTES
+			instructionLength = THREE_BYTE_INSTRUCTION_LENGTH
 
 		case OP_JUMP, OP_JUMP_IF_FALSE:
-			offset := ip + OP_JUMP_TOTAL_BYTES
-			instruction := ac.bytecode.Instructions[ip:offset]
-			operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
-			diassembledInstr, err := DiassembleInstruction(instruction)
-			if err != nil {
-				panic(err.Error())
-			}
-			result := diassembledInstr + fmt.Sprintf(", byte index in instruction array: %d", operand)
+
+			operand, dia := ac.diassemble3ByteInstruction(ip)
+			result := dia + fmt.Sprintf(", byte index in instruction array: %d", operand)
 			builder.WriteString(result)
 			builder.WriteString("\n")
-			instructionLength = OP_JUMP_TOTAL_BYTES
+			instructionLength = THREE_BYTE_INSTRUCTION_LENGTH
 
 		}
 
@@ -694,4 +664,20 @@ func (ac ASTCompiler) resolveGlobal(name string) int {
 		}
 	}
 	return -1
+}
+
+// diassemble3ByteInstruction reads a 3-byte instruction starting at the instruction pointer(ip),
+// in the bytecodes instruction array. IT interprets the final two bytes as a big-endian uint16 operand,
+// and returns it along with the textual disassembly produced by DiassembleInstruction.
+// A panic is raised if DiassembleInstruction returns an error.
+func (ac *ASTCompiler) diassemble3ByteInstruction(ip int) (uint16, string) {
+	offset := ip + 3
+	instruction := ac.bytecode.Instructions[ip:offset]
+	operand := binary.BigEndian.Uint16(instruction[OPCODE_TOTAL_BYTES:])
+	dia, err := DiassembleInstruction(instruction)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return operand, dia
 }
