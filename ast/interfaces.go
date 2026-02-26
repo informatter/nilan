@@ -4,29 +4,31 @@
 
 package ast
 
-// ExpressionVisitor is the interface for operating on all Expression AST nodes.
+// ExprVisitor is the interface for operating on all Expression AST nodes.
 // Any type that wants to perform an operation on expressions (e.g., an interpreter,
 // ast-printer, or type checker) must implement this interface.
 //
 // Each Visit method corresponds to a distinct Expression type.
-type ExpressionVisitor interface {
-	// VisitBinary is called when visiting a Binary expression (e.g., "a + b").
-	VisitBinary(binary Binary) any
+type ExprVisitor interface {
+	// VisitBinaryExpr is called when visiting a Binary expression (e.g., "a + b").
+	VisitBinaryExpr(binary BinaryExpr) any
 
-	// VisitUnary is called when visiting a Unary expression (e.g., "!a" or "-b").
-	VisitUnary(unary Unary) any
+	// VisitUnaryExpr is called when visiting a Unary expression (e.g., "!a" or "-b").
+	VisitUnaryExpr(unary UnaryExpr) any
 
-	// VisitLiteral is called when visiting a Literal expression (e.g., a number, string, or boolean).
-	VisitLiteral(literal Literal) any
+	// VisitLiteralExpr is called when visiting a Literal expression (e.g., a number, string, or boolean).
+	VisitLiteralExpr(literal LiteralExpr) any
 
-	// VisitGrouping is called when visiting a Grouping expression (expressions wrapped in parentheses).
-	VisitGrouping(grouping Grouping) any
+	// VisitGroupingExpr is called when visiting a Grouping expression (expressions wrapped in parentheses).
+	VisitGroupingExpr(grouping GroupingExpr) any
 
-	VisitVariableExpression(variable Variable) any
+	VisitVariableExpr(variable VariableExpr) any
 
-	VisitAssignExpression(assign Assign) any
+	VisitAssignExpr(assign AssignExpr) any
 
-	VisitLogicalExpression(logical Logical) any
+	VisitLogicalExpr(logical LogicalExpr) any
+
+	VisitCallExpr(call CallExpr) any
 
 	// TODO: Add further Visit methods as new expression grammar rules are introduced.
 }
@@ -54,6 +56,10 @@ type StmtVisitor interface {
 
 	VisitWhileStmt(stmt WhileStmt) any
 
+	VisitFunctionStmt(stmt FunctionStmt) any
+
+	VisitReturnStmt(stmt ReturnStmt) any
+
 	// TODO: Add further visit methods as new statement grammar rules are introduced.
 }
 
@@ -71,15 +77,15 @@ type Stmt interface {
 	Accept(v StmtVisitor) any
 }
 
-// Expression is the core interface for all expression nodes in the Abstract Syntax Tree (AST).
+// Expr is the core interface for all expression nodes in the Abstract Syntax Tree (AST).
 // Any expression type (e.g., binary operation, literal, grouping, etc.) must implement this interface.
 // The Accept method enables the Visitor design pattern so that operations can be performed on
 // expressions without the expression types needing to know the details of those operations.
 // The visitor pattern decoupled behaviour from data to easily allow adding the behaviour to objects
 // without the need to change the objects themselves.
-type Expression interface {
+type Expr interface {
 	// Accept dispatches the current expression node to the appropriate method on a Visitor.
 	// v: the Visitor instance that defines behavior for this expression type
 	// Returns: a generic result (any), since the Visitor may define its own return type
-	Accept(v ExpressionVisitor) any
+	Accept(v ExprVisitor) any
 }
