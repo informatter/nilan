@@ -16,22 +16,22 @@ func TestCompilerVariableBehavior(t *testing.T) {
 			name: "var declared without initializer then accessed -> error",
 			statements: []ast.Stmt{
 				ast.VarStmt{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0)},
-				ast.PrintStmt{Expression: ast.Variable{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0)}},
+				ast.PrintStmt{Expression: ast.VariableExpr{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0)}},
 			},
 			hasError: true,
 		},
 		{
 			name: "var declared with initializer then accessed -> success",
 			statements: []ast.Stmt{
-				ast.VarStmt{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0), Initializer: ast.Literal{Value: int64(0)}},
-				ast.PrintStmt{Expression: ast.Variable{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0)}},
+				ast.VarStmt{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0), Initializer: ast.LiteralExpr{Value: int64(0)}},
+				ast.PrintStmt{Expression: ast.VariableExpr{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0)}},
 			},
 			hasError: false,
 		},
 		{
 			name: "access undeclared variable -> error",
 			statements: []ast.Stmt{
-				ast.PrintStmt{Expression: ast.Variable{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "c", 0, 0)}},
+				ast.PrintStmt{Expression: ast.VariableExpr{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "c", 0, 0)}},
 			},
 			hasError: true,
 		},
@@ -39,7 +39,7 @@ func TestCompilerVariableBehavior(t *testing.T) {
 			name: "redeclaration of variable -> error",
 			statements: []ast.Stmt{
 				ast.VarStmt{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0)},
-				ast.VarStmt{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0), Initializer: ast.Literal{Value: int64(9)}},
+				ast.VarStmt{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0), Initializer: ast.LiteralExpr{Value: int64(9)}},
 			},
 			hasError: true,
 		},
@@ -47,7 +47,7 @@ func TestCompilerVariableBehavior(t *testing.T) {
 			name: "assignment to existing variable -> success",
 			statements: []ast.Stmt{
 				ast.VarStmt{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0)},
-				ast.ExpressionStmt{Expression: ast.Assign{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0), Value: ast.Literal{Value: int64(1)}}},
+				ast.ExpressionStmt{Expression: ast.AssignExpr{Name: token.CreateLiteralToken(token.IDENTIFIER, nil, "a", 0, 0), Value: ast.LiteralExpr{Value: int64(1)}}},
 			},
 			hasError: false,
 		},

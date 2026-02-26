@@ -39,9 +39,9 @@ func TestASTCompilerVisitIfStmt(t *testing.T) {
 			name: "if(true){print(1)}else{print(2)}",
 			stmts: []ast.Stmt{
 				ast.IfStmt{
-					Condition: ast.Literal{Value: true},
-					Then:      ast.PrintStmt{Expression: ast.Literal{Value: int64(1)}},
-					Else:      ast.PrintStmt{Expression: ast.Literal{Value: int64(2)}},
+					Condition: ast.LiteralExpr{Value: true},
+					Then:      ast.PrintStmt{Expression: ast.LiteralExpr{Value: int64(1)}},
+					Else:      ast.PrintStmt{Expression: ast.LiteralExpr{Value: int64(2)}},
 				},
 			},
 			want: Bytecode{
@@ -63,9 +63,9 @@ func TestASTCompilerVisitIfStmt(t *testing.T) {
 			name: "if(false){print(1)}else{print(2)}",
 			stmts: []ast.Stmt{
 				ast.IfStmt{
-					Condition: ast.Literal{Value: false},
-					Then:      ast.PrintStmt{Expression: ast.Literal{Value: int64(1)}},
-					Else:      ast.PrintStmt{Expression: ast.Literal{Value: int64(2)}},
+					Condition: ast.LiteralExpr{Value: false},
+					Then:      ast.PrintStmt{Expression: ast.LiteralExpr{Value: int64(1)}},
+					Else:      ast.PrintStmt{Expression: ast.LiteralExpr{Value: int64(2)}},
 				},
 			},
 			want: Bytecode{
@@ -88,8 +88,8 @@ func TestASTCompilerVisitIfStmt(t *testing.T) {
 			name: "if (true){print(42)}",
 			stmts: []ast.Stmt{
 				ast.IfStmt{
-					Condition: ast.Literal{Value: true},
-					Then:      ast.PrintStmt{Expression: ast.Literal{Value: int64(42)}},
+					Condition: ast.LiteralExpr{Value: true},
+					Then:      ast.PrintStmt{Expression: ast.LiteralExpr{Value: int64(42)}},
 					Else:      nil,
 				},
 			},
@@ -110,8 +110,8 @@ func TestASTCompilerVisitIfStmt(t *testing.T) {
 			name: "if (false){print(42)}",
 			stmts: []ast.Stmt{
 				ast.IfStmt{
-					Condition: ast.Literal{Value: false},
-					Then:      ast.PrintStmt{Expression: ast.Literal{Value: int64(42)}},
+					Condition: ast.LiteralExpr{Value: false},
+					Then:      ast.PrintStmt{Expression: ast.LiteralExpr{Value: int64(42)}},
 					Else:      nil,
 				},
 			},
@@ -155,7 +155,7 @@ func TestASTCompilerLocalVariableDeclaration(t *testing.T) {
 					Statements: []ast.Stmt{
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(5)},
+							Initializer: ast.LiteralExpr{Value: int64(5)},
 						},
 					},
 				},
@@ -178,11 +178,11 @@ func TestASTCompilerLocalVariableDeclaration(t *testing.T) {
 					Statements: []ast.Stmt{
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(5)},
+							Initializer: ast.LiteralExpr{Value: int64(5)},
 						},
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "y", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(10)},
+							Initializer: ast.LiteralExpr{Value: int64(10)},
 						},
 					},
 				},
@@ -251,13 +251,13 @@ func TestASTCompilerLocalVariableAccess(t *testing.T) {
 					Statements: []ast.Stmt{
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(5)},
+							Initializer: ast.LiteralExpr{Value: int64(5)},
 						},
 						ast.ExpressionStmt{
-							Expression: ast.Binary{
-								Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+							Expression: ast.BinaryExpr{
+								Left:     ast.VariableExpr{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
 								Operator: token.Token{TokenType: token.ADD},
-								Right:    ast.Literal{Value: int64(3)},
+								Right:    ast.LiteralExpr{Value: int64(3)},
 							},
 						},
 					},
@@ -284,17 +284,17 @@ func TestASTCompilerLocalVariableAccess(t *testing.T) {
 					Statements: []ast.Stmt{
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(5)},
+							Initializer: ast.LiteralExpr{Value: int64(5)},
 						},
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "y", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(10)},
+							Initializer: ast.LiteralExpr{Value: int64(10)},
 						},
 						ast.ExpressionStmt{
-							Expression: ast.Binary{
-								Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+							Expression: ast.BinaryExpr{
+								Left:     ast.VariableExpr{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
 								Operator: token.Token{TokenType: token.ADD},
-								Right:    ast.Variable{Name: token.Token{Lexeme: "y", TokenType: token.IDENTIFIER}},
+								Right:    ast.VariableExpr{Name: token.Token{Lexeme: "y", TokenType: token.IDENTIFIER}},
 							},
 						},
 					},
@@ -344,12 +344,12 @@ func TestASTCompilerLocalVariableAssignment(t *testing.T) {
 					Statements: []ast.Stmt{
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(5)},
+							Initializer: ast.LiteralExpr{Value: int64(5)},
 						},
 						ast.ExpressionStmt{
-							Expression: ast.Assign{
+							Expression: ast.AssignExpr{
 								Name:  token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-								Value: ast.Literal{Value: int64(10)},
+								Value: ast.LiteralExpr{Value: int64(10)},
 							},
 						},
 					},
@@ -375,15 +375,15 @@ func TestASTCompilerLocalVariableAssignment(t *testing.T) {
 					Statements: []ast.Stmt{
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(5)},
+							Initializer: ast.LiteralExpr{Value: int64(5)},
 						},
 						ast.ExpressionStmt{
-							Expression: ast.Assign{
+							Expression: ast.AssignExpr{
 								Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-								Value: ast.Binary{
-									Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+								Value: ast.BinaryExpr{
+									Left:     ast.VariableExpr{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
 									Operator: token.Token{TokenType: token.ADD},
-									Right:    ast.Literal{Value: int64(3)},
+									Right:    ast.LiteralExpr{Value: int64(3)},
 								},
 							},
 						},
@@ -435,13 +435,13 @@ func TestASTCompilerNestedScopes(t *testing.T) {
 					Statements: []ast.Stmt{
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(5)},
+							Initializer: ast.LiteralExpr{Value: int64(5)},
 						},
 						ast.BlockStmt{
 							Statements: []ast.Stmt{
 								ast.VarStmt{
 									Name:        token.Token{Lexeme: "y", TokenType: token.IDENTIFIER},
-									Initializer: ast.Literal{Value: int64(10)},
+									Initializer: ast.LiteralExpr{Value: int64(10)},
 								},
 							},
 						},
@@ -470,19 +470,19 @@ func TestASTCompilerNestedScopes(t *testing.T) {
 					Statements: []ast.Stmt{
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "a", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(1)},
+							Initializer: ast.LiteralExpr{Value: int64(1)},
 						},
 						ast.BlockStmt{
 							Statements: []ast.Stmt{
 								ast.VarStmt{
 									Name:        token.Token{Lexeme: "b", TokenType: token.IDENTIFIER},
-									Initializer: ast.Literal{Value: int64(2)},
+									Initializer: ast.LiteralExpr{Value: int64(2)},
 								},
 								ast.BlockStmt{
 									Statements: []ast.Stmt{
 										ast.VarStmt{
 											Name:        token.Token{Lexeme: "c", TokenType: token.IDENTIFIER},
-											Initializer: ast.Literal{Value: int64(3)},
+											Initializer: ast.LiteralExpr{Value: int64(3)},
 										},
 									},
 								},
@@ -514,15 +514,15 @@ func TestASTCompilerNestedScopes(t *testing.T) {
 			stmts: []ast.Stmt{
 				ast.VarStmt{
 					Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-					Initializer: ast.Literal{Value: int64(5)},
+					Initializer: ast.LiteralExpr{Value: int64(5)},
 				},
 				ast.BlockStmt{
 					Statements: []ast.Stmt{
 						ast.ExpressionStmt{
-							Expression: ast.Binary{
-								Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+							Expression: ast.BinaryExpr{
+								Left:     ast.VariableExpr{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
 								Operator: token.Token{TokenType: token.ADD},
-								Right:    ast.Literal{Value: int64(3)},
+								Right:    ast.LiteralExpr{Value: int64(3)},
 							},
 						},
 					},
@@ -567,21 +567,21 @@ func TestASTCompilerScopeWithIfStatement(t *testing.T) {
 			stmts: []ast.Stmt{
 				ast.VarStmt{
 					Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-					Initializer: ast.Literal{Value: int64(5)},
+					Initializer: ast.LiteralExpr{Value: int64(5)},
 				},
 				ast.IfStmt{
-					Condition: ast.Grouping{
-						Expression: ast.Binary{
-							Left:     ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+					Condition: ast.GroupingExpr{
+						Expression: ast.BinaryExpr{
+							Left:     ast.VariableExpr{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
 							Operator: token.Token{TokenType: token.LARGER},
-							Right:    ast.Literal{Value: int64(3)},
+							Right:    ast.LiteralExpr{Value: int64(3)},
 						},
 					},
 					Then: ast.BlockStmt{
 						Statements: []ast.Stmt{
 							ast.VarStmt{
 								Name:        token.Token{Lexeme: "y", TokenType: token.IDENTIFIER},
-								Initializer: ast.Literal{Value: int64(10)},
+								Initializer: ast.LiteralExpr{Value: int64(10)},
 							},
 						},
 					},
@@ -636,16 +636,16 @@ func TestASTCompilerLocalVariableShadowing(t *testing.T) {
 					Statements: []ast.Stmt{
 						ast.VarStmt{
 							Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-							Initializer: ast.Literal{Value: int64(5)},
+							Initializer: ast.LiteralExpr{Value: int64(5)},
 						},
 						ast.BlockStmt{
 							Statements: []ast.Stmt{
 								ast.VarStmt{
 									Name:        token.Token{Lexeme: "x", TokenType: token.IDENTIFIER},
-									Initializer: ast.Literal{Value: int64(10)},
+									Initializer: ast.LiteralExpr{Value: int64(10)},
 								},
 								ast.ExpressionStmt{
-									Expression: ast.Variable{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
+									Expression: ast.VariableExpr{Name: token.Token{Lexeme: "x", TokenType: token.IDENTIFIER}},
 								},
 							},
 						},
@@ -690,8 +690,8 @@ func TestCompilerPrintStatement(t *testing.T) {
 			name: "Print literal integer",
 			statements: []ast.Stmt{
 				ast.PrintStmt{
-					Expression: ast.Grouping{
-						Expression: ast.Literal{
+					Expression: ast.GroupingExpr{
+						Expression: ast.LiteralExpr{
 							Value: int64(5),
 						},
 					},
@@ -706,8 +706,8 @@ func TestCompilerPrintStatement(t *testing.T) {
 			name: "Print literal float",
 			statements: []ast.Stmt{
 				ast.PrintStmt{
-					Expression: ast.Grouping{
-						Expression: ast.Literal{
+					Expression: ast.GroupingExpr{
+						Expression: ast.LiteralExpr{
 							Value: float64(5.545),
 						},
 					},
@@ -722,11 +722,11 @@ func TestCompilerPrintStatement(t *testing.T) {
 			name: "Print expression result",
 			statements: []ast.Stmt{
 				ast.PrintStmt{
-					Expression: ast.Grouping{
-						Expression: ast.Binary{
-							Left:     ast.Literal{Value: int64(2)},
+					Expression: ast.GroupingExpr{
+						Expression: ast.BinaryExpr{
+							Left:     ast.LiteralExpr{Value: int64(2)},
 							Operator: token.CreateToken(token.ADD, 0, 0),
-							Right:    ast.Literal{Value: int64(10)},
+							Right:    ast.LiteralExpr{Value: int64(10)},
 						},
 					},
 				},
@@ -755,10 +755,10 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 		{
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left:     ast.Literal{Value: int64(5)},
+					Expression: ast.BinaryExpr{
+						Left:     ast.LiteralExpr{Value: int64(5)},
 						Operator: token.CreateToken(token.ADD, 0, 0),
-						Right:    ast.Literal{Value: int64(1)},
+						Right:    ast.LiteralExpr{Value: int64(1)},
 					},
 				},
 			},
@@ -770,10 +770,10 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 		{
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left:     ast.Literal{Value: int64(5)},
+					Expression: ast.BinaryExpr{
+						Left:     ast.LiteralExpr{Value: int64(5)},
 						Operator: token.CreateToken(token.MULT, 0, 0),
-						Right:    ast.Literal{Value: int64(1)},
+						Right:    ast.LiteralExpr{Value: int64(1)},
 					},
 				},
 			},
@@ -785,10 +785,10 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 		{
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left:     ast.Literal{Value: int64(5)},
+					Expression: ast.BinaryExpr{
+						Left:     ast.LiteralExpr{Value: int64(5)},
 						Operator: token.CreateToken(token.DIV, 0, 0),
-						Right:    ast.Literal{Value: int64(1)},
+						Right:    ast.LiteralExpr{Value: int64(1)},
 					},
 				},
 			},
@@ -800,10 +800,10 @@ func TestCompileNumericTokens_BinaryExpressions(t *testing.T) {
 		{
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left:     ast.Literal{Value: int64(5)},
+					Expression: ast.BinaryExpr{
+						Left:     ast.LiteralExpr{Value: int64(5)},
 						Operator: token.CreateToken(token.SUB, 0, 0),
-						Right:    ast.Literal{Value: int64(1)},
+						Right:    ast.LiteralExpr{Value: int64(1)},
 					},
 				},
 			},
@@ -832,9 +832,9 @@ func TestCompileNumericTokens_UnaryExpressions(t *testing.T) {
 		{
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Unary{
+					Expression: ast.UnaryExpr{
 						Operator: token.CreateToken(token.SUB, 0, 0),
-						Right:    ast.Literal{Value: int64(5)},
+						Right:    ast.LiteralExpr{Value: int64(5)},
 					},
 				},
 			},
@@ -866,10 +866,10 @@ func TestASTCompileArithmetic(t *testing.T) {
 			name: "Binary Addition",
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left:     ast.Literal{Value: int64(5)},
+					Expression: ast.BinaryExpr{
+						Left:     ast.LiteralExpr{Value: int64(5)},
 						Operator: token.CreateToken(token.ADD, 0, 0),
-						Right:    ast.Literal{Value: int64(1)},
+						Right:    ast.LiteralExpr{Value: int64(1)},
 					},
 				},
 			},
@@ -882,10 +882,10 @@ func TestASTCompileArithmetic(t *testing.T) {
 			name: "Binary Multiplication",
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left:     ast.Literal{Value: int64(5)},
+					Expression: ast.BinaryExpr{
+						Left:     ast.LiteralExpr{Value: int64(5)},
 						Operator: token.CreateToken(token.MULT, 0, 0),
-						Right:    ast.Literal{Value: int64(3)},
+						Right:    ast.LiteralExpr{Value: int64(3)},
 					},
 				},
 			},
@@ -898,9 +898,9 @@ func TestASTCompileArithmetic(t *testing.T) {
 			name: "Unary Negation",
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Unary{
+					Expression: ast.UnaryExpr{
 						Operator: token.CreateToken(token.SUB, 0, 0),
-						Right:    ast.Literal{Value: int64(5)},
+						Right:    ast.LiteralExpr{Value: int64(5)},
 					},
 				},
 			},
@@ -935,18 +935,18 @@ func TestASTCompilerDisassembleBytecode(t *testing.T) {
 			name: "Nested arithmetic",
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left: ast.Binary{
-							Left:     ast.Literal{Value: int64(1)},
+					Expression: ast.BinaryExpr{
+						Left: ast.BinaryExpr{
+							Left:     ast.LiteralExpr{Value: int64(1)},
 							Operator: token.CreateToken(token.ADD, 0, 0),
-							Right: ast.Binary{
-								Left:     ast.Literal{Value: int64(2)},
+							Right: ast.BinaryExpr{
+								Left:     ast.LiteralExpr{Value: int64(2)},
 								Operator: token.CreateToken(token.MULT, 0, 0),
-								Right:    ast.Literal{Value: int64(4)},
+								Right:    ast.LiteralExpr{Value: int64(4)},
 							},
 						},
 						Operator: token.CreateToken(token.ADD, 0, 0),
-						Right:    ast.Literal{Value: int64(3)},
+						Right:    ast.LiteralExpr{Value: int64(3)},
 					},
 				},
 			},
@@ -963,10 +963,10 @@ opcode: OP_END, operand: None, operand widths: 0 bytes`,
 			name: "Simple Addition",
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left:     ast.Literal{Value: int64(5)},
+					Expression: ast.BinaryExpr{
+						Left:     ast.LiteralExpr{Value: int64(5)},
 						Operator: token.CreateToken(token.ADD, 0, 0),
-						Right:    ast.Literal{Value: int64(3)},
+						Right:    ast.LiteralExpr{Value: int64(3)},
 					},
 				},
 			},
@@ -979,17 +979,17 @@ opcode: OP_END, operand: None, operand widths: 0 bytes`,
 			name: "Complex Expression",
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left: ast.Binary{
-							Left:     ast.Literal{Value: int64(1)},
+					Expression: ast.BinaryExpr{
+						Left: ast.BinaryExpr{
+							Left:     ast.LiteralExpr{Value: int64(1)},
 							Operator: token.CreateToken(token.ADD, 0, 0),
-							Right:    ast.Literal{Value: int64(2)},
+							Right:    ast.LiteralExpr{Value: int64(2)},
 						},
 						Operator: token.CreateToken(token.MULT, 0, 0),
-						Right: ast.Binary{
-							Left:     ast.Literal{Value: int64(4)},
+						Right: ast.BinaryExpr{
+							Left:     ast.LiteralExpr{Value: int64(4)},
 							Operator: token.CreateToken(token.ADD, 0, 0),
-							Right:    ast.Literal{Value: int64(3)},
+							Right:    ast.LiteralExpr{Value: int64(3)},
 						},
 					},
 				},
@@ -1007,14 +1007,14 @@ opcode: OP_END, operand: None, operand widths: 0 bytes`,
 			name: "Division and Subtraction",
 			statements: []ast.Stmt{
 				ast.ExpressionStmt{
-					Expression: ast.Binary{
-						Left: ast.Binary{
-							Left:     ast.Literal{Value: int64(10)},
+					Expression: ast.BinaryExpr{
+						Left: ast.BinaryExpr{
+							Left:     ast.LiteralExpr{Value: int64(10)},
 							Operator: token.CreateToken(token.DIV, 0, 0),
-							Right:    ast.Literal{Value: int64(2)},
+							Right:    ast.LiteralExpr{Value: int64(2)},
 						},
 						Operator: token.CreateToken(token.SUB, 0, 0),
-						Right:    ast.Literal{Value: int64(1)},
+						Right:    ast.LiteralExpr{Value: int64(1)},
 					},
 				},
 			},
@@ -1064,10 +1064,10 @@ func TestASTCompilerVisitWhileStmt(t *testing.T) {
 			name: "while(true){print(1)}",
 			stmts: []ast.Stmt{
 				ast.WhileStmt{
-					Condition: ast.Literal{Value: true},
+					Condition: ast.LiteralExpr{Value: true},
 					Body: ast.BlockStmt{
 						Statements: []ast.Stmt{
-							ast.PrintStmt{Expression: ast.Literal{Value: int64(1)}},
+							ast.PrintStmt{Expression: ast.LiteralExpr{Value: int64(1)}},
 						},
 					},
 				},
@@ -1092,10 +1092,10 @@ func TestASTCompilerVisitWhileStmt(t *testing.T) {
 			name: "while(false){print(1)}",
 			stmts: []ast.Stmt{
 				ast.WhileStmt{
-					Condition: ast.Literal{Value: false},
+					Condition: ast.LiteralExpr{Value: false},
 					Body: ast.BlockStmt{
 						Statements: []ast.Stmt{
-							ast.PrintStmt{Expression: ast.Literal{Value: int64(1)}},
+							ast.PrintStmt{Expression: ast.LiteralExpr{Value: int64(1)}},
 						},
 					},
 				},
@@ -1118,14 +1118,14 @@ func TestASTCompilerVisitWhileStmt(t *testing.T) {
 			name: "while(1 < 5){print('true')}",
 			stmts: []ast.Stmt{
 				ast.WhileStmt{
-					Condition: ast.Binary{
-						Left:     ast.Literal{Value: int64(1)},
+					Condition: ast.BinaryExpr{
+						Left:     ast.LiteralExpr{Value: int64(1)},
 						Operator: token.CreateToken(token.LESS, 0, 0),
-						Right:    ast.Literal{Value: int64(5)},
+						Right:    ast.LiteralExpr{Value: int64(5)},
 					},
 					Body: ast.BlockStmt{
 						Statements: []ast.Stmt{
-							ast.PrintStmt{Expression: ast.Literal{Value: "true"}},
+							ast.PrintStmt{Expression: ast.LiteralExpr{Value: "true"}},
 						},
 					},
 				},
@@ -1152,21 +1152,21 @@ func TestASTCompilerVisitWhileStmt(t *testing.T) {
 			stmts: []ast.Stmt{
 				ast.VarStmt{
 					Name:        token.CreateLiteralToken(token.IDENTIFIER, "x", "x", 0, 0),
-					Initializer: ast.Literal{Value: int64(1)},
+					Initializer: ast.LiteralExpr{Value: int64(1)},
 				},
 				ast.WhileStmt{
-					Condition: ast.Grouping{
-						Expression: ast.Binary{
-							Left:     ast.Variable{Name: token.CreateLiteralToken(token.IDENTIFIER, "x", "x", 0, 0)},
+					Condition: ast.GroupingExpr{
+						Expression: ast.BinaryExpr{
+							Left:     ast.VariableExpr{Name: token.CreateLiteralToken(token.IDENTIFIER, "x", "x", 0, 0)},
 							Operator: token.CreateToken(token.LESS, 0, 0),
-							Right:    ast.Literal{Value: int64(5)},
+							Right:    ast.LiteralExpr{Value: int64(5)},
 						},
 					},
 					Body: ast.BlockStmt{
 						Statements: []ast.Stmt{
 							ast.PrintStmt{
-								Expression: ast.Grouping{
-									Expression: ast.Variable{Name: token.CreateLiteralToken(token.IDENTIFIER, "x", "x", 0, 0)},
+								Expression: ast.GroupingExpr{
+									Expression: ast.VariableExpr{Name: token.CreateLiteralToken(token.IDENTIFIER, "x", "x", 0, 0)},
 								},
 							},
 						},
@@ -1198,14 +1198,14 @@ func TestASTCompilerVisitWhileStmt(t *testing.T) {
 			name: "nested while loops",
 			stmts: []ast.Stmt{
 				ast.WhileStmt{
-					Condition: ast.Literal{Value: true},
+					Condition: ast.LiteralExpr{Value: true},
 					Body: ast.BlockStmt{
 						Statements: []ast.Stmt{
 							ast.WhileStmt{
-								Condition: ast.Literal{Value: false},
+								Condition: ast.LiteralExpr{Value: false},
 								Body: ast.BlockStmt{
 									Statements: []ast.Stmt{
-										ast.PrintStmt{Expression: ast.Literal{Value: int64(1)}},
+										ast.PrintStmt{Expression: ast.LiteralExpr{Value: int64(1)}},
 									},
 								},
 							},

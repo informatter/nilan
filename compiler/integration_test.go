@@ -100,10 +100,10 @@ func TestFullPipeline(t *testing.T) {
 // This ensures the AST produced by the parser is compatible with the ASTCompiler
 func TestPipelineWithParser(t *testing.T) {
 	// Create a simple arithmetic expression AST manually
-	five := ast.Literal{Value: int64(5)}
-	three := ast.Literal{Value: int64(3)}
+	five := ast.LiteralExpr{Value: int64(5)}
+	three := ast.LiteralExpr{Value: int64(3)}
 
-	binaryExpr := ast.Binary{
+	binaryExpr := ast.BinaryExpr{
 		Left:     five,
 		Operator: token.CreateToken(token.MULT, 0, 0),
 		Right:    three,

@@ -11,7 +11,7 @@ import (
 
 func TestPrintASTJSON_PrintLiteral(t *testing.T) {
 	stmts := []ast.Stmt{
-		ast.PrintStmt{Expression: ast.Literal{Value: 42}},
+		ast.PrintStmt{Expression: ast.LiteralExpr{Value: 42}},
 	}
 
 	jsonString, err := PrintASTJSON(stmts)
@@ -75,10 +75,10 @@ func TestPrintASTJSON_VarStmt_NilInitializer(t *testing.T) {
 
 func TestPrintASTJSON_BinaryExpression(t *testing.T) {
 	stmts := []ast.Stmt{
-		ast.ExpressionStmt{Expression: ast.Binary{
-			Left:     ast.Literal{Value: 1},
+		ast.ExpressionStmt{Expression: ast.BinaryExpr{
+			Left:     ast.LiteralExpr{Value: 1},
 			Operator: token.CreateToken(token.ADD, 0, 0),
-			Right:    ast.Literal{Value: 2},
+			Right:    ast.LiteralExpr{Value: 2},
 		}},
 	}
 
@@ -124,7 +124,7 @@ func TestPrintASTJSON_BinaryExpression(t *testing.T) {
 
 func TestWriteASTJSONToFile(t *testing.T) {
 	stmts := []ast.Stmt{
-		ast.PrintStmt{Expression: ast.Literal{Value: "hellow nilan!"}},
+		ast.PrintStmt{Expression: ast.LiteralExpr{Value: "hellow nilan!"}},
 	}
 
 	filePath := filepath.Join(os.TempDir(), "nilan_ast_printer_test.json")
