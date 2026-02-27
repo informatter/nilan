@@ -92,6 +92,9 @@ type FunctionStmt struct {
 	// function's behavior.
 	Body BlockStmt
 	// Parameters is a list of tokens representing the function's parameters.
+	// NOTE/TODO: having tokens allows for parameters to both keep the identifier text (lexeme)
+	// and other useful information like, position and column for error reporting. The TODO in this comment,
+	// is due to the fact that the Lexer currently does not have a good mechanism to track columns and line numbers...
 	Parameters []token.Token
 }
 
