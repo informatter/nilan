@@ -54,7 +54,7 @@ func (r *emitBytecodeCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...int
 	}
 
 	parser := parser.Make(tokens)
-	statements, parseErrs := parser.Parse()
+	statements, parseErrs := parser.Parse(false)
 	if len(parseErrs) > 0 {
 		fmt.Fprintf(os.Stderr, "💥 Parsing error:\n")
 		for _, pErr := range parseErrs {

@@ -49,7 +49,7 @@ func (r *runCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...inte
 		return subcommands.ExitFailure
 	}
 	parser := parser.Make(tokens)
-	ast, errors := parser.Parse()
+	ast, errors := parser.Parse(false)
 	if len(errors) > 0 {
 		for _, error := range errors {
 			fmt.Fprintln(os.Stderr, error)

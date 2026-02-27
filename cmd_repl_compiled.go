@@ -65,7 +65,8 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 	astCompiler := compiler.NewASTCompiler()
 	vm := vm.New()
 	var buffer strings.Builder
-
+	// persistent src for entire REPL session
+	var sessionSource strings.Builder
 	for {
 		var prompt string
 		if buffer.Len() == 0 {
@@ -91,9 +92,13 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 			buffer.WriteString("\n")
 		}
 		buffer.WriteString(line)
-		source := buffer.String()
+		currentChunk := buffer.String()
+		fullSource := currentChunk
+		if sessionSource.Len() > 0 {
+			fullSource = sessionSource.String() + "\n" + currentChunk
+		}
 
-		lex := lexer.New(source)
+		lex := lexer.New(fullSource)
 		tokens, err := lex.Scan()
 		if err != nil {
 			fmt.Println(err)
@@ -106,7 +111,8 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 		}
 
 		parser := parser.Make(tokens)
-		statements, parseErrs := parser.Parse()
+		// `true` indicates that the input is from a REPL session, allowing expressions at the top level.
+		statements, parseErrs := parser.Parse(true)
 		if len(parseErrs) > 0 {
 			// If all parse errors are syntax errors that occur at the position of the EOF token,
 			// it means that the user has not finished typing their input yet.
@@ -122,6 +128,19 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 			continue
 		}
 
+		// Commit current chunk into session source after successful parse.
+		if sessionSource.Len() > 0 {
+			sessionSource.WriteString("\n")
+		}
+		sessionSource.WriteString(currentChunk)
+
+		if cmd.dumpAST {
+			err := parser.PrintToFile(statements, "ast.json")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "💥 Dump AST error:\n:\t%s", err.Error())
+				continue
+			}
+		}
 		// TODO/NOTE: Previous compiled code is going to be recompiled again in the REPL,
 		// but for now its fine
 		bytecode, err := astCompiler.CompileAST(statements)
@@ -143,13 +162,6 @@ func (cmd *replCompiledCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...i
 			err := astCompiler.DumpBytecode("")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "💥 Dump bytecode error:\n:\t%s", err.Error())
-			}
-		}
-		if cmd.dumpAST {
-			err := parser.PrintToFile(statements, "ast.json")
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "💥 Dump AST error:\n:\t%s", err.Error())
-				continue
 			}
 		}
 
