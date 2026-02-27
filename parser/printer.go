@@ -46,6 +46,13 @@ type ifStmtJSON struct {
 	Else      any    `json:"else"`
 }
 
+type funcStmtJSON struct {
+	Type   string   `json:"type"`
+	Name   string   `json:"name"`
+	Params []string `json:"params"`
+	Body   []any    `json:"body"`
+}
+
 type assignExprJSON struct {
 	Type  string `json:"type"`
 	Name  string `json:"name"`
@@ -80,6 +87,12 @@ type unaryExprJSON struct {
 	Type     string `json:"type"`
 	Operator string `json:"operator"`
 	Right    any    `json:"right"`
+}
+
+type callExprJSON struct {
+	Type      string `json:"type"`
+	Callee    any    `json:"callee"`
+	Arguments []any  `json:"arguments"`
 }
 
 // astPrinter implements the Visitor interfaces and builds a
@@ -143,7 +156,7 @@ func (p astPrinter) VisitIfStmt(stmt ast.IfStmt) any {
 	}
 }
 
-func (p astPrinter) VisitLogicalExpression(expr ast.Logical) any {
+func (p astPrinter) VisitLogicalExpr(expr ast.LogicalExpr) any {
 	return logicalExprJSON{
 		Type:     "Logical",
 		Operator: expr.Operator.Lexeme,
@@ -152,7 +165,7 @@ func (p astPrinter) VisitLogicalExpression(expr ast.Logical) any {
 	}
 }
 
-func (p astPrinter) VisitAssignExpression(assign ast.Assign) any {
+func (p astPrinter) VisitAssignExpr(assign ast.AssignExpr) any {
 	return assignExprJSON{
 		Type:  "Assign",
 		Name:  assign.Name.Lexeme,
@@ -160,14 +173,14 @@ func (p astPrinter) VisitAssignExpression(assign ast.Assign) any {
 	}
 }
 
-func (p astPrinter) VisitVariableExpression(variable ast.Variable) any {
+func (p astPrinter) VisitVariableExpr(variable ast.VariableExpr) any {
 	return variableExprJSON{
 		Type: "Variable",
 		Name: variable.Name.Lexeme,
 	}
 }
 
-func (p astPrinter) VisitBinary(b ast.Binary) any {
+func (p astPrinter) VisitBinaryExpr(b ast.BinaryExpr) any {
 	return binaryExprJSON{
 		Type:     "Binary",
 		Operator: b.Operator.Lexeme,
@@ -176,7 +189,7 @@ func (p astPrinter) VisitBinary(b ast.Binary) any {
 	}
 }
 
-func (p astPrinter) VisitUnary(u ast.Unary) any {
+func (p astPrinter) VisitUnaryExpr(u ast.UnaryExpr) any {
 	return unaryExprJSON{
 		Type:     "Unary",
 		Operator: u.Operator.Lexeme,
@@ -184,21 +197,67 @@ func (p astPrinter) VisitUnary(u ast.Unary) any {
 	}
 }
 
-func (p astPrinter) VisitLiteral(l ast.Literal) any {
+func (p astPrinter) VisitLiteralExpr(l ast.LiteralExpr) any {
 	// literals are terminal values and can be used directly in JSON
 	return l.Value
 }
 
-func (p astPrinter) VisitGrouping(g ast.Grouping) any {
+func (p astPrinter) VisitGroupingExpr(g ast.GroupingExpr) any {
 	return groupingExprJSON{
 		Type:       "Grouping",
 		Expression: g.Expression.Accept(p),
 	}
 }
 
+func (p astPrinter) VisitCallExpr(call ast.CallExpr) any {
+
+	args := make([]any, 0, len(call.Arguments))
+	for _, arg := range call.Arguments {
+		args = append(args, arg.Accept(p))
+	}
+
+	return callExprJSON{
+		Type:      "Call",
+		Callee:    call.Callee.Accept(p),
+		Arguments: args,
+	}
+
+}
+
+func (p astPrinter) VisitFunctionStmt(functionStmt ast.FunctionStmt) any {
+	params := make([]string, 0, len(functionStmt.Parameters))
+	for _, param := range functionStmt.Parameters {
+		params = append(params, param.Lexeme)
+	}
+	body := make([]any, 0, len(functionStmt.Body.Statements))
+	for _, stmt := range functionStmt.Body.Statements {
+		body = append(body, stmt.Accept(p))
+	}
+	return funcStmtJSON{
+		Type:   "FunctionStmt",
+		Name:   functionStmt.Name.Lexeme,
+		Params: params,
+		Body:   body,
+	}
+}
+
+func (p astPrinter) VisitReturnStmt(returnStmt ast.ReturnStmt) any {
+
+	var value any
+	if returnStmt.Value != nil {
+		value = returnStmt.Value.Accept(p)
+	} else {
+		value = nil
+	}
+	return map[string]any{
+		"type":  "ReturnStmt",
+		"value": value,
+	}
+}
+
 // nilOrAccept returns nil if expr is nil, otherwise it continues
 // processintg the expression and returns the result.
-func nilOrAccept(expr ast.Expression, p ast.ExpressionVisitor) any {
+func nilOrAccept(expr ast.Expr, p ast.ExprVisitor) any {
 	if expr == nil {
 		return nil
 	}
