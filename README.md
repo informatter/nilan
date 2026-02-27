@@ -125,9 +125,11 @@ Nilan’s syntactic grammar is defined using **ISO Extended Backus–Naur Form (
 ```ebnf
 program = { declaration }, EOF ;
 
-declaration = variable-declaration | statement ;
+declaration = variable-declaration | func-declaration | statement ;
 
 variable-declaration = IDENTIFIER , [ "=" , expression ] ;
+
+func-declaration = IDENTIFIER, "(", [expression],")", block-statement ;
 
 statement = expression
         | if-statement
@@ -161,7 +163,9 @@ term-expression = factor-expression , { ( "+" | "-" ) , factor-expression } ;
 factor-expression = unary-expression , { ( "*" | "/" ) , unary-expression } ;
 
 unary-expression = ( "!" | "-" ) , unary-expression
-            | primary-expression ;
+            | call-expression ;
+
+call-expression = primary-expression, ("(" [arguments] ")")
 
 primary-expression = FLOAT
             | INT
