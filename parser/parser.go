@@ -13,6 +13,8 @@ import (
 	"nilan/token"
 )
 
+const MAX_PARAMETER_COUNT = 8
+
 var comparisonTokenTypes = []token.TokenType{
 	token.LARGER,
 	token.LARGER_EQUAL,
@@ -160,10 +162,15 @@ func (parser *Parser) isMatch(tokenTypes []token.TokenType) bool {
 // continuing until the end of input. Errors during parsing are collected
 // but parsing continues to find additional errors where possible.
 //
+// `fromREPL` indicates whether the input is from a REPL session, which allows for more flexible parsing
+// of statements (e.g., allowing expressions at the top level). If `fromREPL` is false, only declarations are allowed at
+// the top level, and any non-declaration will produce a syntax error.
+// This ensures that REPL sessions can execute arbitrary statements while regular src files enforce a stricter structure.
+//
 // Returns:
 //   - []Stmt: the successfully parsed statements.
 //   - []error: all errors that occurred during parsing.
-func (parser *Parser) Parse() ([]ast.Stmt, []error) {
+func (parser *Parser) Parse(fromREPL bool) ([]ast.Stmt, []error) {
 	statements := []ast.Stmt{}
 	errors := []error{}
 
@@ -171,7 +178,7 @@ func (parser *Parser) Parse() ([]ast.Stmt, []error) {
 		if parser.isFinished() {
 			break
 		}
-		statement, err := parser.declaration()
+		statement, err := parser.parseDecl(!fromREPL)
 		if err != nil {
 			errors = append(errors, err)
 			if !parser.isFinished() {
@@ -185,22 +192,116 @@ func (parser *Parser) Parse() ([]ast.Stmt, []error) {
 	return statements, errors
 }
 
-// declaration parses a declaration statement.
+// parseDecl parses either a top-level declaration or, when allowed, a statement.
+// It inspects the next token and delegates to the appropriate method:
+// - token.FUNC -> parseFuncDecl
+// - token.VAR  -> variableDeclaration
+// If topLevel is true, only declarations are accepted and any other token
+// produces a syntax error.
+// If topLevel is false and no declaration is found, the input is parsed as a statement.
+// Returns the parsed ast.Stmt on success or an error describing the parse failure.
 //
-// It first checks if the next token is a variable declaration keyword (e.g., `var`).
-// If so, it calls the variableDeclaration method to parse the variable declaration statement.
+// Example: For input `fn foo() { print "hello" }`, parseDecl will recognize the `fn` token and
+// delegate to parseFuncDecl to parse the function declaration and body, returning a FunctionStmt AST node.
+// For input `foo()`, if topLevel is false, parseDecl will not find a declaration token, so it will delegate to
+// statement() to parse the function call statement, returning a CallStmt AST node.
+// If topLevel is true and the input is `foo()`, parseDecl will produce a syntax error since it expects a declaration at
+// the top level. This ensures that function calls and other statements are not allowed at the top level.
+// So programs such as:
+// ```
+// fn foo() { print "hello" }
+// foo()
+// ```
+// will produce a syntax error for the `foo()` statement, since it's not a declaration.
 //
-// TODO: Support for function and class declarations will be added later.
-//
-// If the next token is not a variable declaration, it parses a general statement.
-//
-// Returns the parsed statement (Stmt) or an error if parsing fails.
-func (parser *Parser) declaration() (ast.Stmt, error) {
+// However, programs such as:
+// ```
+// fn foo() { print "hello" }
+// var x = 10
+// ```
+// or
+// ```
+// fn foo() { print "hello" }
+// fn main() { foo() }
+// ```
+// will be successfully parsed, since they only contain declarations at the top level.
+func (parser *Parser) parseDecl(topLevel bool) (ast.Stmt, error) {
+
+	if parser.isMatch([]token.TokenType{token.FUNC}) {
+		return parser.parseFuncDecl()
+	}
 	if parser.isMatch([]token.TokenType{token.VAR}) {
 		return parser.variableDeclaration()
 	}
-	// TODO Add support for functions and classes
+	// NOTE/TODO: ℹ️ Uncomment this once I have the necessary infra to enforce this syntax rule.
+	// For exmample, if this is enabled, running `hellow_world.ni` breaks as it needs to be wrapped
+	// within a function declaration which should get automatically executed during runtime.
+	// For thos this is commented out to not block the function implementation development.  After implementing v1 of for functions (no closuers, no recursion, no first class functions)
+	// Ineed to re-enable this and re-write test cases and the `hellow_world.ni` program to conform to this syntax rule.
+
+	// if topLevel {
+	// 	tok := parser.peek()
+	// 	msg := fmt.Sprintf("expected declaration, found '%s'", tok.Lexeme)
+	// 	return nil, CreateSyntaxError(tok.Line, tok.Column, msg)
+	// }
+
 	return parser.statement()
+}
+
+// parseFuncDecl parses a function declaration at the current parser position.
+// If any expected token is missing or block parsing fails, it returns an error.
+func (parser *Parser) parseFuncDecl() (ast.Stmt, error) {
+
+	// TODO: Improve `consume` method so error handling is done in a more
+	// encapsulated way, so we dont have to check for errors after every call
+	// to `consume`
+
+	name, err := parser.consume(token.IDENTIFIER, "expected function name")
+	if err != nil {
+		return nil, err
+	}
+	_, err = parser.consume(token.LPA, "expected '(' after function name")
+	if err != nil {
+		return nil, err
+	}
+	parameters := make([]token.Token, 0)
+
+	if !parser.checkType(token.RPA) {
+		for {
+			if len(parameters) >= MAX_PARAMETER_COUNT {
+				msg := fmt.Sprintf("A method can't have more than %d parameters.", MAX_PARAMETER_COUNT)
+				return nil, CreateSyntaxError(name.Line, name.Column, msg)
+			}
+			param, err := parser.consume(token.IDENTIFIER, "expected parameter name")
+			if err != nil {
+				return nil, err
+			}
+			parameters = append(parameters, param)
+
+			if !parser.isMatch([]token.TokenType{token.COMMA}) {
+				break
+			}
+		}
+	}
+	_, err = parser.consume(token.RPA, "expected ')' after parameters")
+	if err != nil {
+		return nil, err
+	}
+	_, err = parser.consume(token.LCUR, "expected '{' before function body")
+	if err != nil {
+		return nil, err
+	}
+	bodyStmts, err := parser.block()
+	if err != nil {
+		return nil, err
+	}
+	return ast.FunctionStmt{
+		Name:       name,
+		Parameters: parameters,
+		Body: ast.BlockStmt{
+			Statements: bodyStmts,
+		},
+	}, nil
 }
 
 // variableDeclaration parses a variable declaration statement.
@@ -368,7 +469,7 @@ func (parser *Parser) block() ([]ast.Stmt, error) {
 	statements := []ast.Stmt{}
 
 	for !parser.isMatch([]token.TokenType{token.RCUR}) && !parser.isFinished() {
-		stmt, err := parser.declaration()
+		stmt, err := parser.parseDecl(false)
 		if err != nil {
 			return nil, err
 		}
@@ -393,6 +494,65 @@ func (parser *Parser) block() ([]ast.Stmt, error) {
 //   - error: if parsing fails.
 func (parser *Parser) expression() (ast.Expr, error) {
 	return parser.assignment()
+}
+
+// parseCallExpr parses call expressions starting from a primary expression.
+// Returns the resulting ast.Expr or an error encountered while parsing.
+//
+// Example: For input `foo(1, 2)`, parseCallExpr will first parse `foo` as a VariableExpr,
+// then recognize the following `(` as the start of a call expression, and delegate to finishCall
+// to parse the arguments `1` and `2` and construct a CallExpr AST node.
+func (parser *Parser) parseCallExpr() (ast.Expr, error) {
+	expr, err := parser.parsePrimaryExpr()
+	if err != nil {
+		return nil, err
+	}
+
+	// If the next token is a left parenthesis, we have a call expression. We delegate to finishCall to
+	// parse the arguments and update the expression.
+	// NOTE: Currently, This only supports parsing call expressions such as foo(1, 2) or foo() but not method calls such as
+	// x.bar() or x.bar(1, 2), or chained calls `foo()(1)(2)`. To allow chaining, we would need to repeatedly check for a
+	// left parenthesis after parsing the call expression, and delegate to finishCall each time.
+	if parser.isMatch([]token.TokenType{token.LPA}) {
+		expr, err = parser.finishCall(expr)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return expr, nil
+}
+
+// finishCall parses an expression call's argument list for the given callee and
+// returns an ast.CallExpr or an error. It supports 0 or more comma-
+// separated arguments.
+func (parser *Parser) finishCall(callee ast.Expr) (ast.Expr, error) {
+	args := make([]ast.Expr, 0)
+
+	if !parser.checkType(token.RPA) {
+		for {
+			arg, err := parser.expression()
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, arg)
+
+			if !parser.isMatch([]token.TokenType{token.COMMA}) {
+				break
+			}
+		}
+	}
+
+	paren, err := parser.consume(token.RPA, "expected ')' after arguments")
+	if err != nil {
+		return nil, err
+	}
+
+	return ast.CallExpr{
+		Callee:    callee,
+		Paren:     paren,
+		Arguments: args,
+	}, nil
 }
 
 // assignment parses an assignment expression from the token stream.
@@ -618,10 +778,10 @@ func (parser *Parser) unary() (ast.Expr, error) {
 			Right:    right,
 		}, nil
 	}
-	return parser.primary()
+	return parser.parseCallExpr()
 }
 
-// primary parses the most basic forms of expressions:
+// parsePrimaryExpr parses the most basic forms of expressions:
 //   - Literals: true, false, null, strings, numbers
 //   - Grouping: (expression)
 //
@@ -630,7 +790,7 @@ func (parser *Parser) unary() (ast.Expr, error) {
 // Returns:
 //   - Expression: a Literal, Grouping expression .
 //   - error: if no valid primary expression can be parsed.
-func (parser *Parser) primary() (ast.Expr, error) {
+func (parser *Parser) parsePrimaryExpr() (ast.Expr, error) {
 	if parser.isMatch([]token.TokenType{token.FALSE}) {
 		return ast.LiteralExpr{Value: false}, nil
 	}
