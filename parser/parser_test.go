@@ -20,7 +20,7 @@ func parseSource(t *testing.T, source string, fromREPL bool) ([]ast.Stmt, []erro
 	return p.Parse(fromREPL)
 }
 
-func assertParseErrorContains(t *testing.T, source string, expectedSubstring string) {
+func assertParseErrorExists(t *testing.T, source string, expectedSubstring string) {
 	t.Helper()
 
 	_, errs := parseSource(t, source, false)
@@ -216,7 +216,7 @@ func TestParseCallExpr_MalformedCalls(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertParseErrorContains(t, tt.source, tt.expectedErrorPart)
+			assertParseErrorExists(t, tt.source, tt.expectedErrorPart)
 		})
 	}
 }
@@ -251,7 +251,13 @@ func TestParseFuncDecl_MalformedParameterLists(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertParseErrorContains(t, tt.source, tt.expectedErrorPart)
+			assertParseErrorExists(t, tt.source, tt.expectedErrorPart)
 		})
 	}
+}
+
+func TestParseFuncDecl_TooManyParameters(t *testing.T) {
+	source := `fn foo(a,b,c,d,e,f,g,h,i) {}`
+
+	assertParseErrorExists(t, source, "A method can't have more than 8 parameters.")
 }
